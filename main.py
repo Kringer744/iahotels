@@ -2971,8 +2971,8 @@ async def bd_salvar_mensagem_local(
         conversa = await db_pool.fetchrow(
             "SELECT id, empresa_id FROM conversas WHERE conversation_id = $1", conversation_id
         )
-        if not conversa:
-            logger.error(f"Conversa {conversation_id} não encontrada para salvar mensagem.")
+        if not conversa or not conversa['empresa_id']:
+            logger.warning(f"Conversa {conversation_id} sem empresa_id, pulando salvar mensagem.")
             return
         await db_pool.execute("""
             INSERT INTO mensagens (conversa_id, empresa_id, role, tipo, conteudo, url_midia, created_at)
@@ -3063,6 +3063,9 @@ async def bd_registrar_evento_funil(
             return
         conversa_id = conversa['id']
         empresa_id = conversa['empresa_id']
+        if not empresa_id:
+            logger.warning(f"⚠️ Conversa {conversation_id} sem empresa_id, pulando evento funil")
+            return
 
         if tipo_evento == "interesse_detectado":
             existe = await db_pool.fetchval("""
@@ -3507,26 +3510,48 @@ def corrigir_json(texto: str) -> str:
 
 # --- PROCESSAMENTO IA E ÁUDIO ---
 
-async def _transcrever_audio_gemini(audio_bytes: bytes) -> Optional[str]:
-    """Transcreve áudio usando Gemini (Google) — alternativa gratuita ao Whisper."""
+async def _transcrever_audio_gemini(audio_bytes: bytes, mime_type: str = "audio/ogg") -> Optional[str]:
+    """Transcreve áudio usando Gemini via OpenRouter — alternativa gratuita ao Whisper."""
+    if not cliente_ia:
+        return None
     try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=GOOGLE_API_KEY)
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.0-flash",
-            contents=[
-                types.Content(parts=[
-                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/ogg"),
-                    types.Part.from_text("Transcreva este áudio em português. Retorne APENAS o texto transcrito, sem explicações."),
-                ])
-            ]
+        import base64
+        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        fmt_map = {
+            "audio/ogg": "ogg", "audio/opus": "ogg", "audio/mpeg": "mp3",
+            "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
+            "audio/mp4": "m4a", "audio/m4a": "m4a", "audio/aac": "aac",
+            "audio/flac": "flac", "audio/webm": "ogg",
+        }
+        fmt = fmt_map.get(mime_type, "ogg")
+
+        result = await cliente_ia.chat.completions.create(
+            model="google/gemini-2.0-flash-lite",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_audio",
+                        "input_audio": {"data": audio_b64, "format": fmt}
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Transcreva o áudio acima literalmente em português brasileiro. "
+                            "Retorne APENAS o texto falado, sem comentários, descrições ou formatação."
+                        )
+                    }
+                ]
+            }],
+            max_tokens=500,
+            temperature=0.1,
         )
-        texto = response.text.strip()
-        if texto:
-            logger.info(f"🎙️ Gemini STT: '{texto[:80]}...'")
-            return texto
+
+        text = (result.choices[0].message.content or "").strip()
+        if text:
+            logger.info(f"🎙️ Gemini STT: '{text[:80]}...'")
+            return text
         return None
     except Exception as e:
         logger.error(f"Erro Gemini STT: {e}")
@@ -3565,9 +3590,10 @@ async def transcrever_audio(url: str):
             except Exception as e:
                 logger.warning(f"⚠️ Whisper falhou, tentando Gemini: {e}")
 
-    # Fallback: Gemini STT (gratuito com GOOGLE_API_KEY)
-    if GOOGLE_API_KEY:
-        resultado = await _transcrever_audio_gemini(audio_bytes)
+    # Fallback: Gemini STT via OpenRouter (gratuito com OPENROUTER_API_KEY)
+    if cliente_ia:
+        content_type = resp.headers.get("content-type", "audio/ogg").split(";")[0].strip()
+        resultado = await _transcrever_audio_gemini(audio_bytes, content_type)
         if resultado:
             return resultado
 
