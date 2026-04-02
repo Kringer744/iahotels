@@ -3511,44 +3511,25 @@ def corrigir_json(texto: str) -> str:
 # --- PROCESSAMENTO IA E ÁUDIO ---
 
 async def _transcrever_audio_gemini(audio_bytes: bytes, mime_type: str = "audio/ogg") -> Optional[str]:
-    """Transcreve áudio usando Gemini via OpenRouter — alternativa gratuita ao Whisper."""
-    if not cliente_ia:
+    """Transcreve áudio usando Gemini (Google API direta) — gratuito com GOOGLE_API_KEY."""
+    if not GOOGLE_API_KEY:
         return None
     try:
-        import base64
-        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        from google import genai
+        from google.genai import types
 
-        fmt_map = {
-            "audio/ogg": "ogg", "audio/opus": "ogg", "audio/mpeg": "mp3",
-            "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
-            "audio/mp4": "m4a", "audio/m4a": "m4a", "audio/aac": "aac",
-            "audio/flac": "flac", "audio/webm": "ogg",
-        }
-        fmt = fmt_map.get(mime_type, "ogg")
-
-        result = await cliente_ia.chat.completions.create(
-            model="google/gemini-2.0-flash-001",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_audio",
-                        "input_audio": {"data": audio_b64, "format": fmt}
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "Transcreva o áudio acima literalmente em português brasileiro. "
-                            "Retorne APENAS o texto falado, sem comentários, descrições ou formatação."
-                        )
-                    }
-                ]
-            }],
-            max_tokens=500,
-            temperature=0.1,
+        client = genai.Client(api_key=GOOGLE_API_KEY)
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.0-flash",
+            contents=[
+                "Transcreva este áudio literalmente em português brasileiro. "
+                "Retorne APENAS o texto falado, sem comentários, descrições ou formatação.",
+                types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
+            ]
         )
 
-        text = (result.choices[0].message.content or "").strip()
+        text = response.text.strip()
         if text:
             logger.info(f"🎙️ Gemini STT: '{text[:80]}...'")
             return text
@@ -3590,8 +3571,8 @@ async def transcrever_audio(url: str):
             except Exception as e:
                 logger.warning(f"⚠️ Whisper falhou, tentando Gemini: {e}")
 
-    # Fallback: Gemini STT via OpenRouter (gratuito com OPENROUTER_API_KEY)
-    if cliente_ia:
+    # Fallback: Gemini STT via Google API direta (gratuito com GOOGLE_API_KEY)
+    if GOOGLE_API_KEY:
         content_type = resp.headers.get("content-type", "audio/ogg").split(";")[0].strip()
         resultado = await _transcrever_audio_gemini(audio_bytes, content_type)
         if resultado:
