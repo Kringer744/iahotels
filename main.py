@@ -3624,7 +3624,7 @@ async def enviar_aviso_fora_horario(account_id: int, conversation_id: int, integ
     if await redis_client.get(chave_aviso):
         return
     
-    mensagem = "Olá! 👋 No momento nossa IA está fora do horário de atendimento, mas sua mensagem foi recebida! Assim que voltarmos, responderemos com prioridade. Obrigado pela compreensão! ✨"
+    mensagem = "Olá! 👋 Recebemos sua mensagem! No momento estamos fora do horário de atendimento, mas assim que retornarmos vamos te responder com prioridade. Obrigado pela compreensão! ✨"
     try:
         await enviar_mensagem_chatwoot(account_id, conversation_id, mensagem, integracao, empresa_id)
         await redis_client.setex(chave_aviso, 3600, "1") # Silêncio de 1 hora para o mesmo aviso
@@ -3650,41 +3650,6 @@ async def processar_ia_e_responder(
         # ⏱️ Aguarda período para acumular rajada de mensagens (WhatsApp = msgs curtas em sequência)
         # Janela de 4s: captura rajadas típicas de WhatsApp (2-4 msgs em sequência)
         await asyncio.sleep(4.0)
-
-        # --- NOVIDADE: Fluxo Visual de Triagem (n8n-style) ---
-        # Se houver um fluxo ativo para a empresa, ele assume o controle ANTES da IA.
-        _fluxo_config = await carregar_fluxo_triagem(empresa_id)
-        if _fluxo_config and _fluxo_config.get("ativo"):
-            # Recupera o telefone do Redis (armazenado pelo webhook)
-            _fone_redis = await redis_client.get(f"fone_cliente:{conversation_id}")
-            if _fone_redis:
-                # Verifica se a IA está pausada para esta conversa
-                _ia_pausada = bool(await redis_client.exists(f"pause_ia:{empresa_id}:{conversation_id}"))
-                _phone_paused = bool(await redis_client.exists(f"pause_ia_phone:{empresa_id}:{_fone_redis}"))
-                
-                if not _ia_pausada and not _phone_paused:
-                    # Carrega integração para envio
-                    _integr_uaz = await carregar_integracao(empresa_id, 'uazapi')
-                    if _integr_uaz:
-                        _uaz_fluxo_cli = UazAPIClient(
-                            base_url=_integr_uaz.get("url", ""),
-                            token=_integr_uaz.get("token", ""),
-                            instance_name=_integr_uaz.get("instance", "default")
-                        )
-                        # Pega a última mensagem do buffer para o fluxo
-                        _mensagens_pool = await coletar_mensagens_buffer(conversation_id)
-                        if _mensagens_pool:
-                            _ultima_msg = _mensagens_pool[-1]
-                            _tratou = await executar_fluxo(empresa_id, _fone_redis, _ultima_msg, _fluxo_config, _uaz_fluxo_cli)
-                            if _tratou:
-                                logger.info(f"✅ [FluxoTriagem Monolith] Mensagem tratada pelo fluxo visual para {_fone_redis}")
-                                # Se tratou, libera o lock e encerra para evitar que a IA responda
-                                try:
-                                    await redis_client.eval(LUA_RELEASE_LOCK, 1, chave_lock, lock_val)
-                                except Exception: pass
-                                return True
-
-        # --- FIM Fluxo Visual ---
 
         # --- NOVIDADE: Fluxo Visual de Triagem (n8n-style) ---
         # Se houver um fluxo ativo para a empresa, ele assume o controle ANTES da IA.
@@ -3951,7 +3916,15 @@ Tour Virtual: {'vídeo disponível' if unidade.get('link_tour_virtual') else 'n�
             # ── Campos conhecidos da personalidade_ia ──────────────────────────
             tom_voz          = pers.get('tom_voz') or 'Profissional, claro e prestativo'
             estilo           = pers.get('estilo_comunicacao') or ''
-            saudacao         = pers.get('saudacao_personalizada') or f"Olá! Sou {nome_ia}, como posso ajudar?"
+            # Saudação inteligente baseada no horário
+            _hora_atual = datetime.now(ZoneInfo('America/Sao_Paulo')).hour
+            if _hora_atual < 12:
+                _saudacao_periodo = "Bom dia"
+            elif _hora_atual < 18:
+                _saudacao_periodo = "Boa tarde"
+            else:
+                _saudacao_periodo = "Boa noite"
+            saudacao         = pers.get('saudacao_personalizada') or f"{_saudacao_periodo}! Sou {nome_ia}, como posso te ajudar? 😊"
             instrucoes_base  = pers.get('instrucoes_base') or "Atenda o cliente de forma educada."
             regras_atend     = pers.get('regras_atendimento') or "Seja breve e objetivo."
 
@@ -4031,6 +4004,13 @@ NUNCA avalie respostas com frases como "is perfect", "that's great", "perfect an
 Você é um atendente — apenas responda o cliente diretamente.
 
 Seu nome é {nome_ia}. Você é concierge virtual do hotel {nome_empresa}.
+Você é um CONCIERGE DE LUXO — não um chatbot genérico. Suas respostas devem transmitir elegância, conhecimento profundo do hotel e genuine care pelo hóspede.
+REGRAS DE INTELIGÊNCIA CONVERSACIONAL:
+- Se o hóspede perguntar algo que você já respondeu no histórico, NÃO repita a mesma resposta — reconheça que já falou sobre isso e ofereça um ângulo novo ou pergunte se quer mais detalhes.
+- Se o hóspede demonstrar frustração ou insatisfação, mude imediatamente o tom para empático e solucionador. Use frases como "Entendo sua preocupação" e ofereça alternativas concretas.
+- Se o hóspede fizer uma pergunta fora do escopo do hotel (clima, restaurantes na cidade, transporte), ajude com conhecimento geral se possível — um concierge real faria isso.
+- NUNCA responda com listas enormes. Selecione as 2-3 informações mais relevantes para o contexto.
+- Se detectar que o hóspede está comparando preços ou hesitando, destaque os DIFERENCIAIS do hotel sem ser insistente.
 IMPORTANTE: NUNCA diga que vai "enviar um áudio", "mandar um áudio" ou "responder por áudio". O sistema de áudio é automático — você só precisa responder a pergunta normalmente. Se o cliente pedir áudio, responda a pergunta dele diretamente sem mencionar áudio.
 """
             if slug:
@@ -4195,6 +4175,13 @@ REGRAS do fluxo:
 - NUNCA adicione dados que o hóspede NÃO pediu (ex: não jogue horários se pediu preço)
 - Se o hóspede já respondeu uma descoberta, avance para a próxima etapa (confirmar reserva, enviar link)
 
+INTELIGÊNCIA DE CONTEXTO (OBRIGATÓRIO):
+- Se o hóspede mencionar uma OCASIÃO ESPECIAL (aniversário, lua de mel, férias em família), adapte suas sugestões para essa ocasião.
+- Se o hóspede perguntar sobre CHECK-IN/CHECK-OUT fora do horário padrão, informe o horário oficial mas ofereça verificar flexibilidade com a recepção.
+- Se o hóspede perguntar sobre PET, ACESSIBILIDADE ou NECESSIDADES ESPECIAIS, responda com empatia e as informações disponíveis.
+- Se o hóspede enviar apenas "ok", "blz", "beleza", "tá bom" ou similar, NÃO repita informações — pergunte se precisa de algo mais ou deseje uma boa estadia.
+- Se o hóspede enviar APENAS emojis (👍, ❤️, etc.), responda brevemente com "Que bom! Precisa de mais alguma coisa? 😊"
+
 REGRAS DE TOM (OBRIGATÓRIO):
 - NUNCA comece resposta com "Olá" se já houve troca de mensagens — vá direto ao ponto
 - NUNCA diga "Olá! Nossos horários são:" — diga "Nosso horário é:"
@@ -4295,8 +4282,8 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 # Resposta de fallback quando LLM está indisponível
                 _nome_cb = nome_cliente.split()[0].capitalize() if nome_cliente else "você"
                 resposta_texto = (
-                    f"Olá, {_nome_cb}! 😊 Estou com uma lentidão no momento.\n\n"
-                    "Pode me repetir sua dúvida em instantes? Já vou te atender! 💪"
+                    f"Oi, {_nome_cb}! 😊 Me dá um minutinho que já te atendo!\n\n"
+                    "Pode repetir sua pergunta? Quero te ajudar da melhor forma 💛"
                 )
                 novo_estado = estado_atual
                 # Pula o bloco IA e vai direto para envio
@@ -4358,7 +4345,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                             logger.error(f"❌ Timeout no fallback também. Conv {conversation_id}")
                             await cb_llm.record_failure()
                             resposta_bruta = json.dumps({
-                                "resposta": "Estou com uma lentidão agora 😕 Pode tentar novamente em instantes?",
+                                "resposta": "Opa, me dá um instante que estou buscando as informações para você! Pode repetir sua pergunta? 😊",
                                 "estado": estado_atual
                             })
                         except Exception as e2:
@@ -4369,7 +4356,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                 logger.error("❌ Erro no fallback")
                             await cb_llm.record_failure()
                             resposta_bruta = json.dumps({
-                                "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
+                                "resposta": "Estou verificando algumas informações aqui. Pode me mandar sua pergunta de novo? 😊",
                                 "estado": estado_atual
                             })
 
@@ -4392,7 +4379,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                         if erro_provedor:
                             await redis_client.setex(llm_provider_pause_key, 30, "1")
                             resposta_bruta = json.dumps({
-                                "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
+                                "resposta": "Estou com uma lentidão momentânea no sistema, mas já volto! Pode repetir o que precisa? 💛",
                                 "estado": estado_atual
                             })
                         else:
@@ -4409,7 +4396,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     logger.error("❌ Fallback também falhou")
                                 await cb_llm.record_failure()
                                 resposta_bruta = json.dumps({
-                                    "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
+                                    "resposta": "Desculpe a demora! O sistema está se recuperando. Pode mandar sua dúvida de novo que te ajudo! 😊",
                                     "estado": estado_atual
                                 })
 
@@ -4463,21 +4450,40 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 if _tags_midia:
                     resposta_texto = resposta_texto + ' ' + ' '.join(_tags_midia)
 
-                # Inferir estado emocional a partir das palavras-chave da resposta
+                # Inferir estado emocional a partir do contexto completo (mensagem do cliente + resposta)
                 _resp_norm = normalizar(resposta_texto)
-                if any(w in _resp_norm for w in ("reserva", "reservar", "check-in", "checkout", "diaria", "plano", "tarifas", "comecar agora", "matricula", "matricular")):
+                _cli_norm = normalizar(texto_cliente_unificado or "")
+
+                # Detectar frustração/insatisfação do CLIENTE (prioridade alta)
+                if any(w in _cli_norm for w in ("reclamacao", "reclamação", "absurdo", "pessimo", "péssimo", "horrivel", "horrível", "nunca mais", "decepcionado", "decepção", "insatisfeito", "raiva", "indignado", "pior", "lixo", "vergonha")):
+                    novo_estado = "frustrado"
+                elif any(w in _cli_norm for w in ("demora", "demorado", "lento", "nao funciona", "não funciona", "problema", "erro", "bug", "nao consigo", "não consigo")):
+                    novo_estado = "insatisfeito"
+                # Detectar intenção de compra/conversão
+                elif any(w in _cli_norm for w in ("reserva", "reservar", "quero fechar", "vou querer", "manda o link", "quero contratar", "tenho interesse", "vamos fechar", "quero me hospedar", "fazer reserva", "quero reservar")):
                     novo_estado = "conversao"
+                elif any(w in _resp_norm for w in ("reserva", "reservar", "check-in", "checkout", "diaria", "plano", "tarifas", "comecar agora", "matricula", "matricular")):
+                    novo_estado = "conversao"
+                # Detectar entusiasmo
+                elif any(w in _cli_norm for w in ("adorei", "perfeito", "maravilhoso", "incrivel", "amei", "show", "top", "massa", "sensacional", "excelente", "otimo", "ótimo")):
+                    novo_estado = "animado"
                 elif any(w in _resp_norm for w in ("parabens", "que otimo", "incrivel", "adorei", "perfeito")):
                     novo_estado = "animado"
+                # Detectar hesitação
+                elif any(w in _cli_norm for w in ("caro", "muito caro", "nao sei", "não sei", "vou pensar", "vou ver", "depois eu vejo", "talvez", "sera que", "será que", "to em duvida", "estou em dúvida")):
+                    novo_estado = "hesitante"
                 elif any(w in _resp_norm for w in ("entendo", "compreendo", "preocupo", "problema", "dificuldade")):
                     novo_estado = "hesitante"
+                # Detectar interesse ativo
+                elif any(w in _cli_norm for w in ("interessado", "quero saber", "me conta", "me fala", "como funciona", "tem disponibilidade", "quanto custa", "qual o valor", "qual o preco", "qual o preço")):
+                    novo_estado = "interessado"
                 elif any(w in _resp_norm for w in ("interesse", "quero saber", "me conta", "curioso")):
                     novo_estado = "interessado"
                 else:
                     novo_estado = estado_atual
 
                 if not resposta_texto:
-                    resposta_texto = "Desculpe, pode repetir sua pergunta? 😊"
+                    resposta_texto = "Hmm, não entendi bem sua pergunta. Pode reformular? Estou aqui para te ajudar! 😊"
                     novo_estado = estado_atual
 
                 # Pós-processamento de conversão: se o hóspede já sinalizou interesse em reservar,
@@ -4597,7 +4603,19 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
             "pode me responder por áudio", "pode me responder por audio",
             "responde por áudio", "responde por audio"]
         _keywords_audio_off = ["manda texto", "manda por texto", "prefiro texto",
-            "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto"]
+            "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto",
+            "não consigo ouvir", "nao consigo ouvir", "n consigo ouvir",
+            "pode digitar", "digitar pra mim", "digite pra mim", "digita pra mim",
+            "escreve pra mim", "escrever pra mim", "por escrito",
+            "manda mensagem", "manda por mensagem", "responde por texto",
+            "responder por texto", "pode escrever", "escreve por favor",
+            "para de mandar audio", "para de mandar áudio",
+            "não manda audio", "não manda áudio", "nao manda audio", "nao manda áudio",
+            "sem audio", "sem áudio", "para com audio", "para com áudio",
+            "pode ser por texto", "responde por escrito", "responder por escrito",
+            "volta pra texto", "volta para texto", "volta ao texto",
+            "só texto", "so texto", "apenas texto",
+            "não quero audio", "não quero áudio", "nao quero audio", "nao quero áudio"]
 
         # Checa se pediu pra ativar/desativar áudio nesta mensagem
         _todas_msgs = " ".join(textos + (transcricoes or [])).lower()
