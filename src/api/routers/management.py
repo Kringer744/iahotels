@@ -176,13 +176,12 @@ class IntegrationUpdate(BaseModel):
     ativo: bool = True
 
 class FollowupTemplateCreate(BaseModel):
-    nome: str
+    nome: Optional[str] = None
     mensagem: str
     delay_minutos: int
     ordem: int = 1
     tipo: str = "texto"
     ativo: bool = True
-    unidade_id: Optional[int] = None
 
 class FollowupTemplateUpdate(BaseModel):
     nome: Optional[str] = None
@@ -191,7 +190,6 @@ class FollowupTemplateUpdate(BaseModel):
     ordem: Optional[int] = None
     tipo: Optional[str] = None
     ativo: Optional[bool] = None
-    unidade_id: Optional[int] = None
 
 # --- Personality Endpoints ---
 
@@ -1699,12 +1697,10 @@ async def list_followup_templates(token_payload: dict = Depends(get_current_user
     if not empresa_id:
         raise HTTPException(status_code=400, detail="Empresa não vinculada")
     rows = await _database.db_pool.fetch("""
-        SELECT t.id, t.nome, t.mensagem, t.delay_minutos, t.ordem, t.tipo, t.ativo,
-               t.unidade_id, u.nome AS unidade_nome
+        SELECT t.id, t.nome, t.mensagem, t.delay_minutos, t.ordem, t.tipo, t.ativo
         FROM templates_followup t
-        LEFT JOIN unidades u ON u.id = t.unidade_id
         WHERE t.empresa_id = $1
-        ORDER BY t.unidade_id NULLS LAST, t.ordem
+        ORDER BY t.ordem
     """, empresa_id)
     return [dict(r) for r in rows]
 
@@ -1718,10 +1714,10 @@ async def create_followup_template(body: FollowupTemplateCreate, token_payload: 
     if not empresa_id:
         raise HTTPException(status_code=400, detail="Empresa não vinculada")
     row = await _database.db_pool.fetchrow("""
-        INSERT INTO templates_followup (empresa_id, nome, mensagem, delay_minutos, ordem, tipo, ativo, unidade_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO templates_followup (empresa_id, nome, mensagem, delay_minutos, ordem, tipo, ativo)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
-    """, empresa_id, body.nome, body.mensagem, body.delay_minutos, body.ordem, body.tipo, body.ativo, body.unidade_id)
+    """, empresa_id, body.nome, body.mensagem, body.delay_minutos, body.ordem, body.tipo, body.ativo)
     return {"id": row["id"], "status": "created"}
 
 

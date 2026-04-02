@@ -117,12 +117,10 @@ async def agendar_followups(conversation_id: int, account_id: int, slug: str, em
         templates = await _database.db_pool.fetch("""
             SELECT t.*
             FROM templates_followup t
-            LEFT JOIN unidades u ON u.id = t.unidade_id
             WHERE t.empresa_id = $1
               AND t.ativo = true
-              AND (t.unidade_id IS NULL OR u.slug = $2)
-            ORDER BY t.unidade_id NULLS LAST, t.ordem
-        """, empresa_id, slug)
+            ORDER BY t.ordem
+        """, empresa_id)
 
         agora = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
         for t in templates:

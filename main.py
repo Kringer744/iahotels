@@ -1888,12 +1888,9 @@ async def buscar_planos_ativos(empresa_id: int, unidade_id: int = None, force_sy
         SELECT * FROM planos
         WHERE empresa_id = $1 AND ativo = true
           AND link_venda IS NOT NULL AND link_venda != ''
+        ORDER BY ordem, nome
     """
     params = [empresa_id]
-    if unidade_id:
-        query += " AND (unidade_id = $2 OR unidade_id IS NULL)"
-        params.append(unidade_id)
-    query += " ORDER BY ordem, nome"
 
     rows = await db_pool.fetch(query, *params)
     planos = [dict(r) for r in rows]
@@ -2367,12 +2364,10 @@ async def agendar_followups(conversation_id: int, account_id: int, slug: str, em
         templates = await db_pool.fetch("""
             SELECT t.*
             FROM templates_followup t
-            LEFT JOIN unidades u ON u.id = t.unidade_id
             WHERE t.empresa_id = $1
               AND t.ativo = true
-              AND (t.unidade_id IS NULL OR u.slug = $2)
-            ORDER BY t.unidade_id NULLS LAST, t.ordem
-        """, empresa_id, slug)
+            ORDER BY t.ordem
+        """, empresa_id)
 
         agora = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
         for t in templates:
@@ -2886,7 +2881,7 @@ async def carregar_personalidade(empresa_id: int) -> Dict[str, Any]:
 
     try:
         query = """
-            SELECT p.*, fn_ia_esta_no_horario_v2(p.horario_atendimento_ia) AS esta_no_horario
+            SELECT p.*
             FROM personalidade_ia p
             WHERE p.empresa_id = $1 AND p.ativo = true
             ORDER BY p.updated_at DESC
@@ -2895,6 +2890,7 @@ async def carregar_personalidade(empresa_id: int) -> Dict[str, Any]:
         row = await db_pool.fetchrow(query, empresa_id)
         if row:
             dados = dict(row)
+            dados['esta_no_horario'] = True
             for key, value in dados.items():
                 if isinstance(value, Decimal):
                     dados[key] = float(value)
@@ -3003,15 +2999,15 @@ async def bd_salvar_mensagem_local(
         return
     try:
         conversa = await db_pool.fetchrow(
-            "SELECT id FROM conversas WHERE conversation_id = $1", conversation_id
+            "SELECT id, empresa_id FROM conversas WHERE conversation_id = $1", conversation_id
         )
         if not conversa:
             logger.error(f"Conversa {conversation_id} não encontrada para salvar mensagem.")
             return
         await db_pool.execute("""
-            INSERT INTO mensagens (conversa_id, role, tipo, conteudo, url_midia, created_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-        """, conversa['id'], role, tipo, content, url_midia)
+            INSERT INTO mensagens (conversa_id, empresa_id, role, tipo, conteudo, url_midia, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        """, conversa['id'], conversa['empresa_id'], role, tipo, content, url_midia)
     except Exception as e:
         logger.error(f"Erro ao salvar mensagem para conversa {conversation_id}: {e}")
 

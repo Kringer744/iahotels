@@ -380,12 +380,9 @@ async def buscar_planos_ativos(empresa_id: int, unidade_id: int = None, force_sy
         SELECT * FROM planos
         WHERE empresa_id = $1 AND ativo = true
           AND link_venda IS NOT NULL AND link_venda != ''
+        ORDER BY ordem, nome
     """
     params = [empresa_id]
-    if unidade_id:
-        query += " AND (unidade_id = $2 OR unidade_id IS NULL)"
-        params.append(unidade_id)
-    query += " ORDER BY ordem, nome"
 
     rows = await _database.db_pool.fetch(query, *params)
     planos = [dict(r) for r in rows]
@@ -826,7 +823,7 @@ async def carregar_personalidade(empresa_id: int) -> Dict[str, Any]:
 
     try:
         query = """
-            SELECT p.*, fn_ia_esta_no_horario_v2(p.horario_atendimento_ia) AS esta_no_horario
+            SELECT p.*
             FROM personalidade_ia p
             WHERE p.empresa_id = $1 AND p.ativo = true
             ORDER BY p.updated_at DESC
@@ -835,6 +832,7 @@ async def carregar_personalidade(empresa_id: int) -> Dict[str, Any]:
         row = await _database.db_pool.fetchrow(query, empresa_id)
         if row:
             dados = dict(row)
+            dados['esta_no_horario'] = True
             for key, value in dados.items():
                 if isinstance(value, Decimal):
                     dados[key] = float(value)
