@@ -3056,11 +3056,12 @@ async def bd_registrar_evento_funil(
         return
     try:
         conversa = await db_pool.fetchrow(
-            "SELECT id FROM conversas WHERE conversation_id = $1", conversation_id
+            "SELECT id, empresa_id FROM conversas WHERE conversation_id = $1", conversation_id
         )
         if not conversa:
             return
         conversa_id = conversa['id']
+        empresa_id = conversa['empresa_id']
 
         if tipo_evento == "interesse_detectado":
             existe = await db_pool.fetchval("""
@@ -3071,13 +3072,13 @@ async def bd_registrar_evento_funil(
                 return
 
         await db_pool.execute("""
-            INSERT INTO eventos_funil (conversa_id, tipo_evento, descricao, score_incremento, created_at)
-            VALUES ($1, $2, $3, $4, NOW())
-        """, conversa_id, tipo_evento, descricao, score_incremento)
+            INSERT INTO eventos_funil (conversa_id, empresa_id, tipo_evento, descricao, score_incremento, created_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+        """, conversa_id, empresa_id, tipo_evento, descricao, score_incremento)
 
         await db_pool.execute("""
             UPDATE conversas
-            SET score_interesse = score_interesse + $2, updated_at = NOW()
+            SET score_lead = score_lead + $2, updated_at = NOW()
             WHERE id = $1
         """, conversa_id, score_incremento)
 
