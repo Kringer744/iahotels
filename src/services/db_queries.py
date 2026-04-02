@@ -677,7 +677,6 @@ async def buscar_resposta_faq(pergunta: str, slug: str, empresa_id: int) -> Opti
                   AND (
                       f.todas_unidades = true
                       OR f.unidade_id = (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2)
-                      OR (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2) = ANY(f.unidades_ids)
                   )
                 ORDER BY f.prioridade DESC NULLS LAST
                 LIMIT 50
@@ -727,7 +726,7 @@ async def buscar_resposta_faq(pergunta: str, slug: str, empresa_id: int) -> Opti
 async def carregar_faq_unidade(slug: str, empresa_id: int) -> str:
     """
     Carrega as perguntas frequentes da unidade e retorna formatadas para o prompt da IA.
-    Tenta duas queries: com prioridade+visualizacoes, e fallback sem visualizacoes
+    Carrega FAQ filtrada por unidade e empresa.
     (caso a coluna ainda não exista no banco).
     Loga aviso quando FAQ está vazio para facilitar diagnóstico.
     """
@@ -741,7 +740,6 @@ async def carregar_faq_unidade(slug: str, empresa_id: int) -> str:
 
     rows = []
     try:
-        # Query principal — unidade específica, múltiplas unidades ou todas
         rows = await _database.db_pool.fetch("""
             SELECT f.pergunta, f.resposta
             FROM faq f
@@ -749,29 +747,10 @@ async def carregar_faq_unidade(slug: str, empresa_id: int) -> str:
               AND (
                   f.todas_unidades = true
                   OR f.unidade_id = (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2)
-                  OR (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2) = ANY(f.unidades_ids)
               )
-            ORDER BY f.prioridade DESC NULLS LAST, f.visualizacoes DESC NULLS LAST
+            ORDER BY f.prioridade DESC NULLS LAST
             LIMIT 30
         """, slug, empresa_id)
-    except asyncpg.UndefinedColumnError:
-        # Fallback: sem a coluna visualizacoes
-        try:
-            rows = await _database.db_pool.fetch("""
-                SELECT f.pergunta, f.resposta
-                FROM faq f
-                WHERE f.empresa_id = $2 AND f.ativo = true
-                  AND (
-                      f.todas_unidades = true
-                      OR f.unidade_id = (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2)
-                      OR (SELECT id FROM unidades WHERE slug = $1 AND empresa_id = $2) = ANY(f.unidades_ids)
-                  )
-                ORDER BY f.prioridade DESC NULLS LAST
-                LIMIT 30
-            """, slug, empresa_id)
-        except asyncpg.UndefinedTableError:
-            logger.warning(f"⚠️ Tabela 'faq' não existe no banco — FAQ desativado para {slug}")
-            return ""
     except asyncpg.UndefinedTableError:
         logger.warning(f"⚠️ Tabela 'faq' não existe no banco — crie com CREATE TABLE faq (...)")
         return ""
