@@ -4600,6 +4600,29 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
         _enviar_audio = _tts_ativo and _has_whatsapp and _pediu_audio
         logger.info(f"🔊 [TTS Check] conv={conversation_id} | audio_cliente={_cliente_enviou_audio} | tts_ativo={_tts_ativo} | voz={_tts_voz} | has_whatsapp={_has_whatsapp} | enviar_audio={_enviar_audio}")
 
+        # Se cliente só pediu áudio, reenvia a última resposta do bot como áudio (sem chamar LLM)
+        if _enviar_audio and db_pool:
+            try:
+                _conv_row = await db_pool.fetchrow(
+                    "SELECT id FROM conversas WHERE conversation_id = $1", conversation_id
+                )
+                if _conv_row:
+                    _ultima = await db_pool.fetchval("""
+                        SELECT conteudo FROM mensagens
+                        WHERE conversa_id = $1 AND role = 'assistant'
+                        ORDER BY created_at DESC LIMIT 1
+                    """, _conv_row['id'])
+                    if _ultima and _ultima.strip():
+                        logger.info(f"🔊 [TTS Replay] Reenviando última resposta como áudio para conv {conversation_id}")
+                        _ptt_ok = await _enviar_tts_ptt(_ultima.strip())
+                        if _ptt_ok:
+                            await bd_salvar_mensagem_local(conversation_id, "user", "[Pediu áudio]", tipo="texto")
+                            return
+                        else:
+                            logger.warning("⚠️ TTS Replay falhou, seguindo fluxo normal")
+            except Exception as e:
+                logger.error(f"Erro TTS Replay: {e}")
+
         async def _enviar_tts_ptt(texto_para_tts: str) -> bool:
             """Envia áudio PTT via UazAPI se TTS estiver ativo. Retorna True se enviou."""
             if not _enviar_audio or not texto_para_tts:
