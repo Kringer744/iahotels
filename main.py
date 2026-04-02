@@ -4575,32 +4575,42 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
 
         is_manual = (await redis_client.get(f"atend_manual:{empresa_id}:{conversation_id}")) == "1"
 
-        # ── TTS: detecta se cliente enviou áudio → responde com áudio ──
+        # ── TTS: modo áudio persistente por conversa ──
         _tts_ativo = pers.get("tts_ativo", True) if pers else True
         _tts_voz = pers.get("tts_voz", None) if pers else None
         _cliente_enviou_audio = len(transcricoes) > 0 if transcricoes else False
         _uaz_integ = await carregar_integracao(empresa_id, 'uazapi') if empresa_id else None
         _has_whatsapp = bool(_uaz_integ)
-        # Só envia áudio se cliente pedir explicitamente (por texto ou por áudio)
-        _keywords_audio = ["manda áudio", "manda audio", "mandar áudio", "mandar audio",
+
+        # Keywords que ativam modo áudio
+        _keywords_audio_on = ["manda áudio", "manda audio", "mandar áudio", "mandar audio",
             "fala por áudio", "fala por audio", "me fale por áudio", "me fale por audio",
             "responde em áudio", "responde em audio", "por áudio", "por audio",
             "em áudio", "em audio", "manda um áudio", "manda um audio",
             "envia áudio", "envia audio", "quero áudio", "quero audio",
             "prefiro áudio", "prefiro audio", "mandar um áudio", "mandar um audio",
             "pode me mandar um áudio", "pode me mandar um audio"]
-        _pediu_audio = False
-        # Checa nos textos
-        if textos:
-            _txt_lower = " ".join(textos).lower()
-            _pediu_audio = any(p in _txt_lower for p in _keywords_audio)
-        # Checa nas transcrições de áudio (cliente pediu áudio por voz)
-        if not _pediu_audio and transcricoes:
-            _trans_lower = " ".join(transcricoes).lower()
-            _pediu_audio = any(p in _trans_lower for p in _keywords_audio)
-        _enviar_audio = _tts_ativo and _has_whatsapp and _pediu_audio
-        logger.info(f"🔊 [TTS Check] conv={conversation_id} | audio_cliente={_cliente_enviou_audio} | tts_ativo={_tts_ativo} | voz={_tts_voz} | has_whatsapp={_has_whatsapp} | enviar_audio={_enviar_audio}")
+        _keywords_audio_off = ["manda texto", "manda por texto", "prefiro texto",
+            "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto"]
 
+        # Checa se pediu pra ativar/desativar áudio nesta mensagem
+        _todas_msgs = " ".join(textos + (transcricoes or [])).lower()
+        _pediu_audio_agora = any(p in _todas_msgs for p in _keywords_audio_on)
+        _pediu_texto_agora = any(p in _todas_msgs for p in _keywords_audio_off)
+
+        # Flag persistente no Redis: modo áudio para esta conversa
+        _modo_audio_key = f"modo_audio:{conversation_id}"
+        if _pediu_audio_agora and not _pediu_texto_agora:
+            await redis_client.setex(_modo_audio_key, 3600, "1")  # 1 hora
+            logger.info(f"🔊 Modo áudio ATIVADO para conv {conversation_id}")
+        elif _pediu_texto_agora:
+            await redis_client.delete(_modo_audio_key)
+            logger.info(f"📝 Modo áudio DESATIVADO para conv {conversation_id}")
+
+        _modo_audio = await redis_client.get(_modo_audio_key) == "1"
+        _enviar_audio = _tts_ativo and _has_whatsapp and _modo_audio
+
+        logger.info(f"🔊 [TTS Check] conv={conversation_id} | modo_audio={_modo_audio} | tts_ativo={_tts_ativo} | voz={_tts_voz} | enviar_audio={_enviar_audio}")
 
 
         async def _enviar_tts_ptt(texto_para_tts: str) -> bool:
@@ -4654,6 +4664,22 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
             except Exception as e:
                 logger.error(f"❌ [TTS] Erro: {e}", exc_info=True)
                 return False
+
+        # Se só pediu pra ativar/desativar áudio (sem pergunta), confirma e sai
+        if _pediu_audio_agora or _pediu_texto_agora:
+            _sem_keyword = _todas_msgs
+            for kw in (_keywords_audio_on + _keywords_audio_off):
+                _sem_keyword = _sem_keyword.replace(kw, "")
+            _sem_keyword = _sem_keyword.strip(" .,!?¿¡\n\t")
+            if len(_sem_keyword) < 10:
+                if _pediu_audio_agora and not _pediu_texto_agora:
+                    logger.info(f"🔊 Confirmando modo áudio para conv {conversation_id}")
+                    _ptt_ok = await _enviar_tts_ptt("Pronto! A partir de agora vou te responder por áudio. Pode mandar sua pergunta!")
+                    if not _ptt_ok:
+                        await enviar_mensagem_chatwoot(account_id, conversation_id, "Pronto! A partir de agora vou te responder por áudio 🎙️", nome_ia, integracao_chatwoot, empresa_id)
+                elif _pediu_texto_agora:
+                    await enviar_mensagem_chatwoot(account_id, conversation_id, "Sem problemas! Voltei para o modo texto 😊", nome_ia, integracao_chatwoot, empresa_id)
+                return
 
         if is_manual or await redis_client.exists(f"pause_ia:{empresa_id}:{conversation_id}"):
             pass  # IA pausada, não envia
