@@ -999,6 +999,21 @@ async def startup_event():
     if OPENROUTER_API_KEY and cliente_ia:
         logger.info("🤖 OpenRouter habilitado (OPENROUTER_API_KEY carregada)")
 
+    # Limpa cooldowns de provider pause e cache de respostas antigas no startup
+    try:
+        _pause_keys = []
+        async for key in redis_client.scan_iter("llm:provider_pause:*"):
+            _pause_keys.append(key)
+        async for key in redis_client.scan_iter("cb:openrouter:*"):
+            _pause_keys.append(key)
+        async for key in redis_client.scan_iter("cache:resposta:*"):
+            _pause_keys.append(key)
+        if _pause_keys:
+            await redis_client.delete(*_pause_keys)
+            logger.info(f"🧹 Limpou {len(_pause_keys)} chaves de cooldown/circuit-breaker no startup")
+    except Exception as e:
+        logger.warning(f"⚠️ Erro ao limpar cooldowns no startup: {e}")
+
     worker_tasks = [
         asyncio.create_task(worker_followup(), name="worker_followup"),
         asyncio.create_task(worker_metricas_diarias(), name="worker_metricas_diarias"),
