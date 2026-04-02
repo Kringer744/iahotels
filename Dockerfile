@@ -28,4 +28,6 @@ EXPOSE 8000
 
 # Comando padrão (pode ser sobrescrito pelo Easypanel)
 # Usando sh -c para permitir expansão da variável de ambiente PORT
-CMD ["sh", "-c", "echo '=== ENV ===' && echo REDIS_URL=$REDIS_URL && echo DATABASE_URL=$DATABASE_URL && echo JWT_SECRET_KEY=$JWT_SECRET_KEY && echo '=== ALEMBIC ===' && alembic upgrade head && echo '=== UVICORN ===' && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+CMD ["/start.sh"]
