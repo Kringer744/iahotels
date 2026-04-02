@@ -533,8 +533,9 @@ async def criar_unidade(
             body.cidade, body.bairro, body.estado, body.endereco, body.numero,
             body.telefone_principal, body.whatsapp, body.site, body.instagram,
             body.link_matricula, body.horarios or None, body.modalidades or None,
-            body.planos or {}, body.formas_pagamento or {}, body.convenios or {},
-            body.infraestrutura or {}, body.servicos or {}, body.palavras_chave or [],
+            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
+            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
+            json.dumps(body.servicos or {}), body.palavras_chave or [],
             body.foto_grade or None, body.link_tour_virtual or None
         )
         from src.core.redis_client import redis_client
@@ -747,9 +748,11 @@ async def atualizar_unidade(
             body.nome, body.nome_abreviado, body.cidade, body.bairro,
             body.estado, body.endereco, body.numero, body.telefone_principal,
             body.whatsapp, body.site, body.instagram, body.link_matricula,
-            body.horarios or None, body.modalidades or None, body.planos or {},
-            body.formas_pagamento or {}, body.convenios or {}, body.infraestrutura or {},
-            body.servicos or {}, body.palavras_chave or [], body.foto_grade or None, body.link_tour_virtual or None,
+            body.horarios or None, body.modalidades or None,
+            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
+            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
+            json.dumps(body.servicos or {}), body.palavras_chave or [],
+            body.foto_grade or None, body.link_tour_virtual or None,
             unidade_id, empresa_id
         )
         from src.core.redis_client import redis_client
