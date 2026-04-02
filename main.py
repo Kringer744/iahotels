@@ -4580,11 +4580,23 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
         _cliente_enviou_audio = len(transcricoes) > 0 if transcricoes else False
         _uaz_integ = await carregar_integracao(empresa_id, 'uazapi') if empresa_id else None
         _has_whatsapp = bool(_uaz_integ)
-        # Só envia áudio se cliente pedir explicitamente por texto
+        # Só envia áudio se cliente pedir explicitamente (por texto ou por áudio)
+        _keywords_audio = ["manda áudio", "manda audio", "mandar áudio", "mandar audio",
+            "fala por áudio", "fala por audio", "me fale por áudio", "me fale por audio",
+            "responde em áudio", "responde em audio", "por áudio", "por audio",
+            "em áudio", "em audio", "manda um áudio", "manda um audio",
+            "envia áudio", "envia audio", "quero áudio", "quero audio",
+            "prefiro áudio", "prefiro audio", "mandar um áudio", "mandar um audio",
+            "pode me mandar um áudio", "pode me mandar um audio"]
         _pediu_audio = False
+        # Checa nos textos
         if textos:
             _txt_lower = " ".join(textos).lower()
-            _pediu_audio = any(p in _txt_lower for p in ["manda áudio", "manda audio", "fala por áudio", "fala por audio", "me fale por áudio", "me fale por audio", "responde em áudio", "responde em audio", "por áudio", "por audio", "em áudio", "em audio", "manda um áudio", "manda um audio", "envia áudio", "envia audio", "quero áudio", "quero audio", "prefiro áudio", "prefiro audio"])
+            _pediu_audio = any(p in _txt_lower for p in _keywords_audio)
+        # Checa nas transcrições de áudio (cliente pediu áudio por voz)
+        if not _pediu_audio and transcricoes:
+            _trans_lower = " ".join(transcricoes).lower()
+            _pediu_audio = any(p in _trans_lower for p in _keywords_audio)
         _enviar_audio = _tts_ativo and _has_whatsapp and _pediu_audio
         logger.info(f"🔊 [TTS Check] conv={conversation_id} | audio_cliente={_cliente_enviou_audio} | tts_ativo={_tts_ativo} | voz={_tts_voz} | has_whatsapp={_has_whatsapp} | enviar_audio={_enviar_audio}")
 
@@ -4672,24 +4684,39 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 resposta_texto = fast_reply if isinstance(fast_reply, str) else ""
             typing_time = min(len(resposta_texto) * 0.015, 3.5) + random.uniform(0.3, 0.8)
             await simular_digitacao(account_id, conversation_id, integracao_chatwoot, typing_time, empresa_id)
-            await enviar_mensagem_chatwoot(
-                account_id, conversation_id, resposta_texto, nome_ia, integracao_chatwoot, empresa_id
-            )
-            await _enviar_tts_ptt(resposta_texto)
+            if _enviar_audio:
+                _ptt_ok = await _enviar_tts_ptt(resposta_texto)
+                if not _ptt_ok:
+                    await enviar_mensagem_chatwoot(
+                        account_id, conversation_id, resposta_texto, nome_ia, integracao_chatwoot, empresa_id
+                    )
+            else:
+                await enviar_mensagem_chatwoot(
+                    account_id, conversation_id, resposta_texto, nome_ia, integracao_chatwoot, empresa_id
+                )
             await bd_atualizar_msg_ia(conversation_id)
             await bd_registrar_primeira_resposta(conversation_id)
 
         else:
-            # ── Resposta da IA: envia texto + áudio ──────────────
+            # ── Resposta da IA ──────────────
             if resposta_texto and resposta_texto.strip():
                 _texto_final = resposta_texto.strip()
 
                 typing_time = min(len(_texto_final) * 0.02, 4.0) + random.uniform(0.3, 0.8)
                 await simular_digitacao(account_id, conversation_id, integracao_chatwoot, typing_time, empresa_id)
-                await enviar_mensagem_chatwoot(
-                    account_id, conversation_id, _texto_final, nome_ia, integracao_chatwoot, empresa_id
-                )
-                await _enviar_tts_ptt(_texto_final)
+                if _enviar_audio:
+                    # Pediu áudio: manda só áudio, sem texto
+                    _ptt_ok = await _enviar_tts_ptt(_texto_final)
+                    if not _ptt_ok:
+                        # Se TTS falhar, manda texto como fallback
+                        await enviar_mensagem_chatwoot(
+                            account_id, conversation_id, _texto_final, nome_ia, integracao_chatwoot, empresa_id
+                        )
+                else:
+                    # Padrão: manda só texto
+                    await enviar_mensagem_chatwoot(
+                        account_id, conversation_id, _texto_final, nome_ia, integracao_chatwoot, empresa_id
+                    )
                 await bd_atualizar_msg_ia(conversation_id)
                 await bd_registrar_primeira_resposta(conversation_id)
 
