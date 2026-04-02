@@ -4650,14 +4650,12 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 await bd_salvar_mensagem_local(conversation_id, "assistant", bloco_plano.strip())
                 typing_time = min(len(bloco_plano) * 0.012, 3.0) + random.uniform(0.2, 0.6)
                 await simular_digitacao(account_id, conversation_id, integracao_chatwoot, typing_time, empresa_id)
-                # TTS PTT apenas no último bloco — se enviou áudio, pula texto
-                _ptt_enviado = False
+                await enviar_mensagem_chatwoot(
+                    account_id, conversation_id, bloco_plano.strip(), nome_ia, integracao_chatwoot, empresa_id
+                )
+                # TTS PTT apenas no último bloco
                 if _plano_idx == _total_planos:
-                    _ptt_enviado = await _enviar_tts_ptt(bloco_plano.strip())
-                if not _ptt_enviado:
-                    await enviar_mensagem_chatwoot(
-                        account_id, conversation_id, bloco_plano.strip(), nome_ia, integracao_chatwoot, empresa_id
-                    )
+                    await _enviar_tts_ptt(bloco_plano.strip())
                 await bd_atualizar_msg_ia(conversation_id)
                 if i == 0:
                     await bd_registrar_primeira_resposta(conversation_id)
@@ -4668,26 +4666,24 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 resposta_texto = fast_reply if isinstance(fast_reply, str) else ""
             typing_time = min(len(resposta_texto) * 0.015, 3.5) + random.uniform(0.3, 0.8)
             await simular_digitacao(account_id, conversation_id, integracao_chatwoot, typing_time, empresa_id)
-            _ptt_enviado = await _enviar_tts_ptt(resposta_texto)
-            if not _ptt_enviado:
-                await enviar_mensagem_chatwoot(
-                    account_id, conversation_id, resposta_texto, nome_ia, integracao_chatwoot, empresa_id
-                )
+            await enviar_mensagem_chatwoot(
+                account_id, conversation_id, resposta_texto, nome_ia, integracao_chatwoot, empresa_id
+            )
+            await _enviar_tts_ptt(resposta_texto)
             await bd_atualizar_msg_ia(conversation_id)
             await bd_registrar_primeira_resposta(conversation_id)
 
         else:
-            # ── Resposta da IA: envia INTEIRA como UMA mensagem ──────────────
+            # ── Resposta da IA: envia texto + áudio ──────────────
             if resposta_texto and resposta_texto.strip():
                 _texto_final = resposta_texto.strip()
 
                 typing_time = min(len(_texto_final) * 0.02, 4.0) + random.uniform(0.3, 0.8)
                 await simular_digitacao(account_id, conversation_id, integracao_chatwoot, typing_time, empresa_id)
-                _ptt_enviado = await _enviar_tts_ptt(_texto_final)
-                if not _ptt_enviado:
-                    await enviar_mensagem_chatwoot(
-                        account_id, conversation_id, _texto_final, nome_ia, integracao_chatwoot, empresa_id
-                    )
+                await enviar_mensagem_chatwoot(
+                    account_id, conversation_id, _texto_final, nome_ia, integracao_chatwoot, empresa_id
+                )
+                await _enviar_tts_ptt(_texto_final)
                 await bd_atualizar_msg_ia(conversation_id)
                 await bd_registrar_primeira_resposta(conversation_id)
 
