@@ -318,44 +318,28 @@ async def sincronizar_planos_evo(
         if not p.get('link_venda'):
             continue
 
-        # Se estamos sincronizando para uma unidade específica, o plano deve ser vinculado a ela.
-        # Caso contrário, se for global, unidade_id no banco fica nulo.
-        
         existing = await _database.db_pool.fetchval("""
             SELECT id FROM planos 
             WHERE empresa_id = $1 AND id_externo = $2
         """, empresa_id, p['id'])
 
         if existing:
-            if unidade_id is not None:
-                # FIX: só atualiza unidade_id quando sabemos qual é — evita sobrescrever com NULL
-                await _database.db_pool.execute("""
-                    UPDATE planos SET
-                        unidade_id = $1, nome = $2, valor = $3, valor_promocional = $4,
-                        meses_promocionais = $5, descricao = $6, diferenciais = $7,
-                        link_venda = $8, updated_at = NOW()
-                    WHERE id = $9
-                """, unidade_id, p['nome'], p['valor'], p['valor_promocional'],
-                   p['meses_promocionais'], p['descricao'], p['diferenciais'],
-                   p['link_venda'], existing)
-            else:
-                # Sync global: não sobrescreve unidade_id (preserva vínculo existente)
-                await _database.db_pool.execute("""
-                    UPDATE planos SET
-                        nome = $1, valor = $2, valor_promocional = $3,
-                        meses_promocionais = $4, descricao = $5, diferenciais = $6,
-                        link_venda = $7, updated_at = NOW()
-                    WHERE id = $8
-                """, p['nome'], p['valor'], p['valor_promocional'],
-                   p['meses_promocionais'], p['descricao'], p['diferenciais'],
-                   p['link_venda'], existing)
+            await _database.db_pool.execute("""
+                UPDATE planos SET
+                    nome = $1, valor = $2, valor_promocional = $3,
+                    meses_promocionais = $4, descricao = $5, diferenciais = $6,
+                    link_venda = $7, updated_at = NOW()
+                WHERE id = $8
+            """, p['nome'], p['valor'], p['valor_promocional'],
+               p['meses_promocionais'], p['descricao'], p['diferenciais'],
+               p['link_venda'], existing)
         else:
             await _database.db_pool.execute("""
                 INSERT INTO planos
-                    (empresa_id, unidade_id, id_externo, nome, valor, valor_promocional, meses_promocionais,
+                    (empresa_id, id_externo, nome, valor, valor_promocional, meses_promocionais,
                      descricao, diferenciais, link_venda, ativo, ordem)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, 0)
-            """, empresa_id, unidade_id, p['id'], p['nome'], p['valor'], p['valor_promocional'],
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 0)
+            """, empresa_id, p['id'], p['nome'], p['valor'], p['valor_promocional'],
                p['meses_promocionais'], p['descricao'], p['diferenciais'], p['link_venda'])
             count += 1
 
@@ -389,7 +373,6 @@ async def buscar_planos_ativos(empresa_id: int, unidade_id: int = None, force_sy
 
     if not planos and force_sync:
         logger.info(f"🔄 Nenhum plano ativo no banco para empresa {empresa_id} unidade {unidade_id}. Tentando sincronizar da API...")
-        # FIX: passa unidade_id para que o sync não grave planos de outras unidades como globais (unidade_id=NULL)
         await sincronizar_planos_evo(empresa_id, unidade_id=unidade_id)
         rows = await _database.db_pool.fetch(query, *params)
         planos = [dict(r) for r in rows]

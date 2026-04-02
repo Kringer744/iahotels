@@ -182,6 +182,7 @@ class FollowupTemplateCreate(BaseModel):
     ordem: int = 1
     tipo: str = "texto"
     ativo: bool = True
+    unidade_id: Optional[int] = None  # aceito pelo frontend mas não persiste (coluna não existe)
 
 class FollowupTemplateUpdate(BaseModel):
     nome: Optional[str] = None
@@ -190,6 +191,7 @@ class FollowupTemplateUpdate(BaseModel):
     ordem: Optional[int] = None
     tipo: Optional[str] = None
     ativo: Optional[bool] = None
+    unidade_id: Optional[int] = None  # aceito pelo frontend mas não persiste (coluna não existe)
 
 # --- Personality Endpoints ---
 
@@ -1738,7 +1740,8 @@ async def update_followup_template(
     )
     if not exists:
         raise HTTPException(status_code=404, detail="Template não encontrado")
-    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    _exclude = {"unidade_id"}
+    updates = {k: v for k, v in body.model_dump().items() if v is not None and k not in _exclude}
     if not updates:
         return {"status": "no_changes"}
     set_clause = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(updates))
