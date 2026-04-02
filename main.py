@@ -74,7 +74,8 @@ from src.core.config import (
     PROMETHEUS_OK as _PROMETHEUS_OK,
     METRIC_WEBHOOKS_TOTAL, METRIC_IA_LATENCY, METRIC_FAST_PATH_TOTAL,
     METRIC_ERROS_TOTAL, METRIC_CONVERSAS_ATIVAS, METRIC_PLANOS_ENVIADOS,
-    METRIC_ALUNO_DETECTADO, generate_latest, CONTENT_TYPE_LATEST
+    METRIC_ALUNO_DETECTADO, generate_latest, CONTENT_TYPE_LATEST,
+    GOOGLE_API_KEY
 )
 
 load_dotenv()
@@ -3506,33 +3507,71 @@ def corrigir_json(texto: str) -> str:
 
 # --- PROCESSAMENTO IA E ÁUDIO ---
 
+async def _transcrever_audio_gemini(audio_bytes: bytes) -> Optional[str]:
+    """Transcreve áudio usando Gemini (Google) — alternativa gratuita ao Whisper."""
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=GOOGLE_API_KEY)
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.0-flash",
+            contents=[
+                types.Content(parts=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/ogg"),
+                    types.Part.from_text("Transcreva este áudio em português. Retorne APENAS o texto transcrito, sem explicações."),
+                ])
+            ]
+        )
+        texto = response.text.strip()
+        if texto:
+            logger.info(f"🎙️ Gemini STT: '{texto[:80]}...'")
+            return texto
+        return None
+    except Exception as e:
+        logger.error(f"Erro Gemini STT: {e}")
+        return None
+
+
 async def transcrever_audio(url: str):
-    if not cliente_whisper:
-        return "[Áudio recebido, mas Whisper não configurado]"
-    async with whisper_semaphore:
-        try:
-            resp = await baixar_midia_com_retry(url, timeout=15.0)
-            audio_file = io.BytesIO(resp.content)
-            audio_file.name = "audio.ogg"
-            transcription = await cliente_whisper.audio.transcriptions.create(
-                model="whisper-1", file=audio_file
-            )
-            return transcription.text
-        except httpx.TimeoutException as e:
-            logger.error(f"⏱️ Timeout ao baixar áudio: {e}")
-            if _PROMETHEUS_OK:
-                METRIC_ERROS_TOTAL.labels(tipo="whisper_timeout").inc()
-            return "[Erro ao baixar áudio: timeout]"
-        except httpx.HTTPStatusError as e:
-            logger.error(f"❌ HTTP {e.response.status_code} ao baixar áudio: {e}")
-            if _PROMETHEUS_OK:
-                METRIC_ERROS_TOTAL.labels(tipo="whisper_http").inc()
-            return "[Erro ao baixar áudio]"
-        except Exception as e:
-            logger.error(f"Erro Whisper: {e}")
-            if _PROMETHEUS_OK:
-                METRIC_ERROS_TOTAL.labels(tipo="whisper_unknown").inc()
-            return "[Erro ao transcrever áudio]"
+    try:
+        resp = await baixar_midia_com_retry(url, timeout=15.0)
+    except httpx.TimeoutException as e:
+        logger.error(f"⏱️ Timeout ao baixar áudio: {e}")
+        if _PROMETHEUS_OK:
+            METRIC_ERROS_TOTAL.labels(tipo="whisper_timeout").inc()
+        return "[Erro ao baixar áudio: timeout]"
+    except httpx.HTTPStatusError as e:
+        logger.error(f"❌ HTTP {e.response.status_code} ao baixar áudio: {e}")
+        if _PROMETHEUS_OK:
+            METRIC_ERROS_TOTAL.labels(tipo="whisper_http").inc()
+        return "[Erro ao baixar áudio]"
+    except Exception as e:
+        logger.error(f"Erro ao baixar áudio: {e}")
+        return "[Erro ao baixar áudio]"
+
+    audio_bytes = resp.content
+
+    # Tenta Whisper (OpenAI) primeiro, senão Gemini (Google)
+    if cliente_whisper:
+        async with whisper_semaphore:
+            try:
+                audio_file = io.BytesIO(audio_bytes)
+                audio_file.name = "audio.ogg"
+                transcription = await cliente_whisper.audio.transcriptions.create(
+                    model="whisper-1", file=audio_file
+                )
+                return transcription.text
+            except Exception as e:
+                logger.warning(f"⚠️ Whisper falhou, tentando Gemini: {e}")
+
+    # Fallback: Gemini STT (gratuito com GOOGLE_API_KEY)
+    if GOOGLE_API_KEY:
+        resultado = await _transcrever_audio_gemini(audio_bytes)
+        if resultado:
+            return resultado
+
+    return "[Áudio recebido, mas nenhum serviço de transcrição configurado]"
 
 
 @retry(
