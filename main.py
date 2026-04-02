@@ -4585,11 +4585,17 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
         # Keywords que ativam modo áudio
         _keywords_audio_on = ["manda áudio", "manda audio", "mandar áudio", "mandar audio",
             "fala por áudio", "fala por audio", "me fale por áudio", "me fale por audio",
-            "responde em áudio", "responde em audio", "por áudio", "por audio",
-            "em áudio", "em audio", "manda um áudio", "manda um audio",
+            "responde em áudio", "responde em audio", "responder por áudio", "responder por audio",
+            "por áudio", "por audio", "em áudio", "em audio",
+            "manda um áudio", "manda um audio", "mandar um áudio", "mandar um audio",
             "envia áudio", "envia audio", "quero áudio", "quero audio",
-            "prefiro áudio", "prefiro audio", "mandar um áudio", "mandar um audio",
-            "pode me mandar um áudio", "pode me mandar um audio"]
+            "prefiro áudio", "prefiro audio",
+            "pode me mandar um áudio", "pode me mandar um audio",
+            "consegue mandar um áudio", "consegue mandar um audio",
+            "consegue mandar áudio", "consegue mandar audio",
+            "não consigo ler", "nao consigo ler",
+            "pode me responder por áudio", "pode me responder por audio",
+            "responde por áudio", "responde por audio"]
         _keywords_audio_off = ["manda texto", "manda por texto", "prefiro texto",
             "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto"]
 
