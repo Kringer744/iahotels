@@ -64,7 +64,7 @@ export default function ServicosPage() {
       setServicos(res.data || []);
     } catch (err) {
       console.error(err);
-      setError("Erro ao carregar servi\u00e7os.");
+      setError("Erro ao carregar serviços.");
     } finally {
       setLoading(false);
     }
@@ -103,15 +103,15 @@ export default function ServicosPage() {
   // ─── Save ─────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.nome.trim()) {
-      setError("Nome do servi\u00e7o \u00e9 obrigat\u00f3rio.");
+      setError("Nome do serviço é obrigatório.");
       return;
     }
     if (form.duracao_minutos < 1) {
-      setError("Dura\u00e7\u00e3o deve ser maior que 0.");
+      setError("Duração deve ser maior que 0.");
       return;
     }
     if (form.preco < 0) {
-      setError("Pre\u00e7o n\u00e3o pode ser negativo.");
+      setError("Preço não pode ser negativo.");
       return;
     }
 
@@ -126,7 +126,7 @@ export default function ServicosPage() {
       setModalOpen(false);
       fetchServicos();
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Erro ao salvar servi\u00e7o.");
+      setError(err?.response?.data?.detail || "Erro ao salvar serviço.");
     } finally {
       setSaving(false);
     }
@@ -162,11 +162,11 @@ export default function ServicosPage() {
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                Servi\u00e7os
+                Serviços
               </h1>
             </div>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-              {servicos.length} servi\u00e7o{servicos.length !== 1 ? "s" : ""} cadastrado{servicos.length !== 1 ? "s" : ""}
+              {servicos.length} serviço{servicos.length !== 1 ? "s" : ""} cadastrado{servicos.length !== 1 ? "s" : ""}
             </p>
           </div>
 
@@ -176,7 +176,7 @@ export default function ServicosPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
-                placeholder="Buscar servi\u00e7o..."
+                placeholder="Buscar serviço..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="pl-10 pr-4 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]/40 transition-colors w-56"
@@ -190,7 +190,7 @@ export default function ServicosPage() {
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-black font-bold text-sm rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 transition-shadow"
             >
               <Plus className="w-4 h-4" />
-              Novo Servi\u00e7o
+              Novo Serviço
             </motion.button>
           </div>
         </header>
@@ -208,9 +208,9 @@ export default function ServicosPage() {
               className="flex flex-col items-center justify-center h-64 text-gray-500"
             >
               <Scissors className="w-12 h-12 mb-4 opacity-30" />
-              <p className="text-lg font-bold">Nenhum servi\u00e7o encontrado</p>
+              <p className="text-lg font-bold">Nenhum serviço encontrado</p>
               <p className="text-sm mt-1">
-                {busca ? "Tente outro termo de busca." : 'Clique em "+ Novo Servi\u00e7o" para come\u00e7ar.'}
+                {busca ? "Tente outro termo de busca." : 'Clique em "+ Novo Serviço" para começar.'}
               </p>
             </motion.div>
           ) : (
@@ -218,11 +218,11 @@ export default function ServicosPage() {
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">
                 <div className="col-span-3">Nome</div>
-                <div className="col-span-3">Descri\u00e7\u00e3o</div>
-                <div className="col-span-2 text-center">Dura\u00e7\u00e3o</div>
-                <div className="col-span-2 text-center">Pre\u00e7o</div>
+                <div className="col-span-3">Descrição</div>
+                <div className="col-span-2 text-center">Duração</div>
+                <div className="col-span-2 text-center">Preço</div>
                 <div className="col-span-1 text-center">Status</div>
-                <div className="col-span-1 text-center">A\u00e7\u00f5es</div>
+                <div className="col-span-1 text-center">Ações</div>
               </div>
 
               {/* Rows */}
@@ -321,7 +321,7 @@ export default function ServicosPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
                 <h2 className="text-lg font-black text-white">
-                  {editingId ? "Editar Servi\u00e7o" : "Novo Servi\u00e7o"}
+                  {editingId ? "Editar Serviço" : "Novo Serviço"}
                 </h2>
                 <button
                   onClick={() => setModalOpen(false)}
@@ -343,7 +343,7 @@ export default function ServicosPage() {
                 {/* Nome */}
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
-                    Nome do Servi\u00e7o
+                    Nome do Serviço
                   </label>
                   <input
                     type="text"
@@ -357,12 +357,12 @@ export default function ServicosPage() {
                 {/* Descricao */}
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
-                    Descri\u00e7\u00e3o
+                    Descrição
                   </label>
                   <textarea
                     value={form.descricao}
                     onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-                    placeholder="Descreva o servi\u00e7o..."
+                    placeholder="Descreva o serviço..."
                     rows={3}
                     className="w-full px-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37]/40 transition-colors resize-none"
                   />
@@ -372,7 +372,7 @@ export default function ServicosPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
-                      Dura\u00e7\u00e3o (minutos)
+                      Duração (minutos)
                     </label>
                     <input
                       type="number"
@@ -386,7 +386,7 @@ export default function ServicosPage() {
                   </div>
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
-                      Pre\u00e7o (R$)
+                      Preço (R$)
                     </label>
                     <input
                       type="number"
@@ -418,7 +418,7 @@ export default function ServicosPage() {
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-black font-bold text-sm rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 transition-shadow disabled:opacity-50"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingId ? "Salvar Altera\u00e7\u00f5es" : "Criar Servi\u00e7o"}
+                  {editingId ? "Salvar Alterações" : "Criar Serviço"}
                 </motion.button>
               </div>
             </motion.div>
@@ -446,9 +446,9 @@ export default function ServicosPage() {
               <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <Power className="w-6 h-6 text-red-400" />
               </div>
-              <h3 className="text-lg font-black text-white mb-2">Desativar Servi\u00e7o?</h3>
+              <h3 className="text-lg font-black text-white mb-2">Desativar Serviço?</h3>
               <p className="text-sm text-gray-400 mb-6">
-                O servi\u00e7o ser\u00e1 desativado e n\u00e3o aparecer\u00e1 mais para agendamentos.
+                O serviço será desativado e não aparecerá mais para agendamentos.
               </p>
               <div className="flex items-center justify-center gap-3">
                 <button

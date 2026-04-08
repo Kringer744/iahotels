@@ -137,10 +137,10 @@ export default function AvaliacoesPage() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-white tracking-tight">
-            Avalia{"\u00e7\u00f5"}es
+            Avalia{"çõ"}es
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Acompanhe a satisfa{"\u00e7\u00e3"}o dos clientes por barbeiro
+            Acompanhe a satisfa{"çã"}o dos clientes por barbeiro
           </p>
         </motion.div>
 
@@ -234,7 +234,7 @@ export default function AvaliacoesPage() {
                     </div>
                     <p className="text-gray-500 text-xs mt-2">
                       {mediaData.total}{" "}
-                      {mediaData.total === 1 ? "avalia\u00e7\u00e3o" : "avalia\u00e7\u00f5es"}
+                      {mediaData.total === 1 ? "avaliação" : "avaliações"}
                     </p>
                   </div>
                   <div className="flex-1 pl-6 border-l border-white/10">
@@ -245,7 +245,7 @@ export default function AvaliacoesPage() {
                       {selectedBarberName}
                     </p>
                     <p className="text-xs text-gray-500 mt-3">
-                      M{"\u00e9"}dia baseada em todas as avalia{"\u00e7\u00f5"}es recebidas
+                      M{"é"}dia baseada em todas as avalia{"çõ"}es recebidas
                     </p>
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export default function AvaliacoesPage() {
                 className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 backdrop-blur-xl"
               >
                 <p className="text-sm font-semibold text-gray-400 mb-4">
-                  Distribui{"\u00e7\u00e3"}o de Notas
+                  Distribui{"çã"}o de Notas
                 </p>
                 <div className="space-y-3">
                   {starDistribution.map(({ star, count, pct }) => (
@@ -300,14 +300,14 @@ export default function AvaliacoesPage() {
               custom={2}
             >
               <p className="text-sm font-semibold text-gray-400 mb-4">
-                Avalia{"\u00e7\u00f5"}es Recentes
+                Avalia{"çõ"}es Recentes
               </p>
 
               {avaliacoes.length === 0 && (
                 <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-12 text-center backdrop-blur-xl">
                   <MessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">
-                    Nenhuma avalia{"\u00e7\u00e3"}o encontrada para este barbeiro.
+                    Nenhuma avalia{"çã"}o encontrada para este barbeiro.
                   </p>
                 </div>
               )}
@@ -365,7 +365,7 @@ export default function AvaliacoesPage() {
           >
             <Star className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400 text-sm">
-              Selecione um barbeiro para visualizar suas avalia{"\u00e7\u00f5"}es
+              Selecione um barbeiro para visualizar suas avalia{"çõ"}es
             </p>
           </motion.div>
         )}
