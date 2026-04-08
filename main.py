@@ -3994,22 +3994,42 @@ async def processar_ia_e_responder(
             _texto_cliente_norm,
         ))
 
-        # Se detectou intenção de agendamento, busca disponibilidade e injeta no contexto
+        # ── SEMPRE carrega barbeiros + serviços (para info de preços etc.) ──
         _contexto_agendamento = ""
+        _barbeiros = []
+        _servicos = []
+        if db_pool:
+            try:
+                from src.services.agendamento_service import (
+                    listar_barbeiros, listar_servicos,
+                )
+                _barbeiros = await listar_barbeiros(db_pool, empresa_id)
+                _servicos = await listar_servicos(db_pool, empresa_id)
+                if _barbeiros or _servicos:
+                    _contexto_agendamento = "\n\n[INFORMAÇÕES DO ESTABELECIMENTO]\n"
+                    if _barbeiros:
+                        _nomes_barb = ", ".join(b['nome'] for b in _barbeiros)
+                        _contexto_agendamento += f"Profissionais disponíveis: {_nomes_barb}\n"
+                    if _servicos:
+                        _srv_list = "; ".join(f"{s['nome']} ({s['duracao_minutos']}min, R${s['preco']:.2f})" if s.get('preco') else f"{s['nome']} ({s['duracao_minutos']}min)" for s in _servicos)
+                        _contexto_agendamento += f"Serviços: {_srv_list}\n"
+                    _contexto_agendamento += "\n2. PREÇOS: Use SOMENTE os preços listados nos Serviços acima. NUNCA invente preços.\n"
+                    _contexto_agendamento += "3. PROFISSIONAIS: Use SOMENTE os nomes listados em \"Profissionais disponíveis\" acima.\n"
+                    contexto_precarregado += _contexto_agendamento
+                    logger.info(f"💈 Contexto de serviços/barbeiros injetado para conv {conversation_id} | barbeiros={len(_barbeiros)} servicos={len(_servicos)}")
+            except Exception as e:
+                logger.error(f"Erro ao carregar barbeiros/serviços: {e}")
+
+        # ── Só carrega disponibilidade detalhada quando intenção de agendamento detectada ──
         if _intencao_agendar and db_pool:
             try:
                 from src.services.agendamento_service import (
                     obter_proximos_dias_disponiveis, parse_data_texto,
                     formatar_disponibilidade_para_ia, buscar_agendamentos_cliente,
-                    listar_barbeiros, listar_servicos,
                 )
 
                 # Tenta extrair data do texto do cliente
                 _data_pedida = parse_data_texto(texto_cliente_unificado or "")
-
-                # Busca barbeiros e serviços
-                _barbeiros = await listar_barbeiros(db_pool, empresa_id)
-                _servicos = await listar_servicos(db_pool, empresa_id)
 
                 if _data_pedida:
                     _disp = await formatar_disponibilidade_para_ia(db_pool, empresa_id, _data_pedida)
@@ -4023,24 +4043,18 @@ async def processar_ia_e_responder(
                     _fone_limpo = "".join(filter(str.isdigit, str(_fone_cli)))
                     _agendamentos_cli = await buscar_agendamentos_cliente(db_pool, empresa_id, _fone_limpo)
 
-                _contexto_agendamento = "\n\n[DADOS DE AGENDAMENTO — USE PARA RESPONDER]\n"
-                if _barbeiros:
-                    _nomes_barb = ", ".join(b['nome'] for b in _barbeiros)
-                    _contexto_agendamento += f"Profissionais disponíveis: {_nomes_barb}\n"
-                if _servicos:
-                    _srv_list = "; ".join(f"{s['nome']} ({s['duracao_minutos']}min, R${s['preco']:.2f})" if s.get('preco') else f"{s['nome']} ({s['duracao_minutos']}min)" for s in _servicos)
-                    _contexto_agendamento += f"Serviços: {_srv_list}\n"
-                _contexto_agendamento += f"\n{_disp}\n"
+                _contexto_disp = "\n\n[DADOS DE AGENDAMENTO — USE PARA RESPONDER]\n"
+                _contexto_disp += f"\n{_disp}\n"
                 if _agendamentos_cli:
                     _ag_list = "\n".join(
                         f"  • {a['data_hora'].strftime('%d/%m %H:%M')} com {a.get('barbeiro_nome', '?')} ({a.get('servico_nome', 'corte')})"
                         for a in _agendamentos_cli
                     )
-                    _contexto_agendamento += f"\nAgendamentos futuros deste cliente:\n{_ag_list}\n"
+                    _contexto_disp += f"\nAgendamentos futuros deste cliente:\n{_ag_list}\n"
                 else:
-                    _contexto_agendamento += "\nEste cliente NÃO tem agendamentos futuros.\n"
+                    _contexto_disp += "\nEste cliente NÃO tem agendamentos futuros.\n"
 
-                _contexto_agendamento += """
+                _contexto_disp += """
 ⚠️⚠️⚠️ REGRAS DE AGENDAMENTO — ANTI-ALUCINAÇÃO (OBRIGATÓRIO — SIGA À RISCA):
 
 1. DISPONIBILIDADE: Olhe os dados "Dias com vagas" ou "Horários disponíveis" ACIMA.
@@ -4065,8 +4079,8 @@ async def processar_ia_e_responder(
 6. Para CANCELAR: use <CANCELAR_AGENDAMENTO:id_do_agendamento>
 7. A tag NÃO aparece para o cliente, é processada internamente pelo sistema.
 """
-                contexto_precarregado += _contexto_agendamento
-                logger.info(f"💈 Contexto de agendamento injetado para conv {conversation_id} | barbeiros={len(_barbeiros)} servicos={len(_servicos)} disp={_disp[:100]}")
+                contexto_precarregado += _contexto_disp
+                logger.info(f"💈 Contexto de disponibilidade injetado para conv {conversation_id} | disp={_disp[:100]}")
             except Exception as e:
                 logger.error(f"Erro ao carregar contexto de agendamento: {e}")
 
@@ -4884,6 +4898,44 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                     )
                     if _ag:
                         logger.info(f"✅ Agendamento #{_ag['id']} criado via IA para conv {conversation_id}: {_barb_nome} em {_data_str}")
+
+                        # ── Notifica barbeiro via WhatsApp (UazAPI) ──
+                        try:
+                            _barb_fone = _barb.get('telefone', '') or ''
+                            if _barb_fone:
+                                _barb_fone_clean = "".join(filter(str.isdigit, str(_barb_fone)))
+                                if _barb_fone_clean:
+                                    _uaz_notif = await carregar_integracao(empresa_id, 'uazapi')
+                                    if _uaz_notif:
+                                        _NOMES_DIA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+                                        _dia_nome = _NOMES_DIA[_data_hora.weekday()]
+                                        _data_fmt = _data_hora.strftime('%d/%m/%Y')
+                                        _horario_fmt = _data_hora.strftime('%H:%M')
+                                        _serv_nome_notif = _serv['nome'] if _serv else 'Corte'
+                                        _cliente_nome_notif = nome_cliente or 'Cliente'
+
+                                        _msg_barb = (
+                                            f"📅 *Novo Agendamento!*\n\n"
+                                            f"👤 Cliente: {_cliente_nome_notif}\n"
+                                            f"📆 {_dia_nome}, {_data_fmt} às {_horario_fmt}\n"
+                                            f"✂️ {_serv_nome_notif}\n\n"
+                                            f"Prepare-se! 💈"
+                                        )
+
+                                        _uaz_cli_notif = UazAPIClient(
+                                            _uaz_notif.get('url') or _uaz_notif.get('api_url'),
+                                            _uaz_notif.get('token'),
+                                            _uaz_notif.get('instance', 'default')
+                                        )
+                                        await _uaz_cli_notif.send_text(_barb_fone_clean, _msg_barb)
+                                        logger.info(f"📲 Notificação de agendamento enviada para barbeiro {_barb_nome} ({_barb_fone_clean})")
+                                    else:
+                                        logger.debug(f"📲 UazAPI não configurada para empresa {empresa_id}, notificação ao barbeiro não enviada")
+                            else:
+                                logger.debug(f"📲 Barbeiro {_barb_nome} não tem telefone cadastrado, notificação não enviada")
+                        except Exception as _e_notif:
+                            logger.warning(f"⚠️ Erro ao notificar barbeiro {_barb_nome} sobre agendamento: {_e_notif}")
+
                     else:
                         logger.warning(f"⚠️ Conflito ao criar agendamento via IA para conv {conversation_id}")
                 elif not _barb:
