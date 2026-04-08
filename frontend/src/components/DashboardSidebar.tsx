@@ -51,12 +51,12 @@ export default function DashboardSidebar({ activePage = "dashboard" }: SidebarPr
       {/* Logo */}
       <div className="px-6 py-8 border-b border-white/5">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.location.href = "/dashboard"}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center shadow-lg shadow-[#D4AF37]/20 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E11D48] to-[#BE123C] flex items-center justify-center shadow-lg shadow-[#E11D48]/20 group-hover:scale-110 transition-transform">
             <Scissors className="w-5 h-5 text-black font-black" />
           </div>
           <div>
             <p className="font-black text-lg leading-tight tracking-tighter text-white">
-              Barber <span className="font-light text-[#D4AF37]/80">IA</span>
+              Barber <span className="font-light text-[#E11D48]/80">IA</span>
             </p>
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Smart Scheduling</p>
           </div>
@@ -71,12 +71,12 @@ export default function DashboardSidebar({ activePage = "dashboard" }: SidebarPr
           return (
             <a key={item.href} href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${isActive
-                ? "bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20"
+                ? "bg-[#E11D48]/10 text-[#E11D48] border border-[#E11D48]/20"
                 : "text-gray-400 hover:text-white hover:bg-white/5"
               }`}>
-              <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#D4AF37]" : "group-hover:text-white"}`} />
+              <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#E11D48]" : "group-hover:text-white"}`} />
               {item.label}
-              {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#D4AF37] shadow-[0_0_8px_rgba(212,175,55,0.6)]" />}
+              {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#E11D48] shadow-[0_0_8px_rgba(225,29,72,0.6)]" />}
             </a>
           );
         })}
@@ -96,7 +96,7 @@ export default function DashboardSidebar({ activePage = "dashboard" }: SidebarPr
       <div className="px-3 py-4 border-t border-white/5">
         {user && (
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-xs font-bold flex-shrink-0 text-black">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#E11D48] to-[#BE123C] flex items-center justify-center text-xs font-bold flex-shrink-0 text-black">
               {user?.nome?.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">

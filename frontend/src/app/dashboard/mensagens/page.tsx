@@ -11,13 +11,13 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const textareaClass =
-  "w-full bg-slate-900/60 border border-white/8 rounded-2xl px-5 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37]/40 focus:bg-slate-900/80 transition-all font-medium text-sm resize-none leading-relaxed";
+  "w-full bg-slate-900/60 border border-white/8 rounded-2xl px-5 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-[#E11D48]/40 focus:bg-slate-900/80 transition-all font-medium text-sm resize-none leading-relaxed";
 
 function Field({ label, icon: Icon, children }: { label: string; icon?: any; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
       <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-        {Icon && <Icon className="w-3.5 h-3.5 text-[#D4AF37]/50" />} {label}
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#E11D48]/50" />} {label}
       </label>
       {children}
     </div>
@@ -203,22 +203,22 @@ export default function MensagensPage() {
 
       <main className="flex-1 min-w-0 overflow-auto">
         {/* Decorative glow */}
-        <div className="fixed top-0 right-0 w-[600px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed top-0 right-0 w-[600px] h-[400px] bg-[#E11D48]/3 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative z-10 p-8 lg:p-10 max-w-4xl mx-auto">
           {/* ── Header ───────────────────────────────────────────────── */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full" />
-                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em]">
+                <div className="w-1.5 h-5 bg-[#E11D48] rounded-full" />
+                <span className="text-[10px] font-black text-[#E11D48] uppercase tracking-[0.4em]">
                   Barber IA
                 </span>
               </div>
               <h1 className="text-4xl font-black tracking-tight">
                 <span
                   style={{
-                    background: "linear-gradient(135deg, #fff 0%, #D4AF37 100%)",
+                    background: "linear-gradient(135deg, #fff 0%, #E11D48 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                   }}
@@ -239,7 +239,7 @@ export default function MensagensPage() {
               className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm min-w-[200px] justify-center transition-all ${
                 success
                   ? "bg-emerald-500 text-white"
-                  : "bg-[#D4AF37] text-black shadow-[0_0_25px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.4)]"
+                  : "bg-[#E11D48] text-black shadow-[0_0_25px_rgba(225,29,72,0.3)] hover:shadow-[0_0_40px_rgba(225,29,72,0.4)]"
               }`}
             >
               {saving ? (
@@ -261,7 +261,7 @@ export default function MensagensPage() {
           {/* ── Loading state ────────────────────────────────────────── */}
           {loading ? (
             <div className="flex items-center justify-center py-32">
-              <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#E11D48] animate-spin" />
             </div>
           ) : (
             /* ── Message fields ──────────────────────────────────────── */
@@ -272,13 +272,13 @@ export default function MensagensPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:border-[#D4AF37]/20 transition-all"
+                  className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:border-[#E11D48]/20 transition-all"
                 >
                   {/* Card header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 border border-[#D4AF37]/20 flex items-center justify-center">
-                        <field.icon className="w-5 h-5 text-[#D4AF37]" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E11D48]/20 to-[#E11D48]/5 border border-[#E11D48]/20 flex items-center justify-center">
+                        <field.icon className="w-5 h-5 text-[#E11D48]" />
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-base leading-tight">
@@ -299,7 +299,7 @@ export default function MensagensPage() {
                       <button
                         type="button"
                         onClick={() => togglePreview(field.key)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-[#D4AF37]/10 border border-white/10 hover:border-[#D4AF37]/30 rounded-lg text-[10px] font-bold text-slate-400 hover:text-[#D4AF37] transition-all uppercase tracking-wider"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-[#E11D48]/10 border border-white/10 hover:border-[#E11D48]/30 rounded-lg text-[10px] font-bold text-slate-400 hover:text-[#E11D48] transition-all uppercase tracking-wider"
                       >
                         {previews[field.key] ? (
                           <>
@@ -322,7 +322,7 @@ export default function MensagensPage() {
                     {field.variables.map((v) => (
                       <span
                         key={v}
-                        className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[10px] font-bold text-[#D4AF37] cursor-pointer hover:bg-[#D4AF37]/20 transition-all"
+                        className="px-2.5 py-1 rounded-lg bg-[#E11D48]/10 border border-[#E11D48]/20 text-[10px] font-bold text-[#E11D48] cursor-pointer hover:bg-[#E11D48]/20 transition-all"
                         onClick={() => {
                           const textarea = document.getElementById(
                             `textarea-${field.key}`

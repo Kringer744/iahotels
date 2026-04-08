@@ -164,7 +164,7 @@ export default function DashboardPage() {
               }`}>
               <item.icon className={`w-4 h-4 flex-shrink-0 ${item.active ? "text-primary" : "group-hover:text-white"}`} />
               {item.label}
-              {item.active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(212,175,55,0.6)]" />}
+              {item.active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(225,29,72,0.6)]" />}
             </a>
           ))}
 
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                         <motion.div
                           initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                           transition={{ duration: 1, delay: 0.2 + i * 0.1 }}
-                          className={`h-full rounded-full bg-primary/80 shadow-[0_0_8px_rgba(212,175,55,0.5)]`}
+                          className={`h-full rounded-full bg-primary/80 shadow-[0_0_8px_rgba(225,29,72,0.5)]`}
                         />
                       </div>
                     </div>

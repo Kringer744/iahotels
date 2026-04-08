@@ -92,7 +92,7 @@ const EMPTY_FORM: Omit<Personality, "id"> = {
   contexto_extra: "", abordagem_proativa: "", exemplos: "",
   palavras_proibidas: "", despedida_personalizada: "",
   regras_formatacao: "", regras_seguranca: "",
-  emoji_tipo: "✨,💪,🔥", emoji_cor: "#D4AF37",
+  emoji_tipo: "✨,💪,🔥", emoji_cor: "#E11D48",
   estilo_comunicacao: "", saudacao_personalizada: "", regras_atendimento: "",
   tts_ativo: true, tts_voz: "Kore",
   oferecer_tour: true,
@@ -344,7 +344,7 @@ export default function PersonalityPage() {
       regras_formatacao: p.regras_formatacao || "",
       regras_seguranca: p.regras_seguranca || "",
       emoji_tipo: p.emoji_tipo || "✨",
-      emoji_cor: p.emoji_cor || "#D4AF37",
+      emoji_cor: p.emoji_cor || "#E11D48",
       estilo_comunicacao: p.estilo_comunicacao || "",
       saudacao_personalizada: p.saudacao_personalizada || "",
       regras_atendimento: p.regras_atendimento || "",
@@ -594,7 +594,7 @@ export default function PersonalityPage() {
     voz:        !!(fd.tts_voz),
   };
 
-  const iClass = "w-full bg-[#0d1f3a] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#D4AF37]/60 focus:bg-[#0d1f3a] transition-all text-sm leading-relaxed";
+  const iClass = "w-full bg-[#0d1f3a] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#E11D48]/60 focus:bg-[#0d1f3a] transition-all text-sm leading-relaxed";
   const taClass = `${iClass} resize-none leading-7`;
   const lClass = "block text-xs font-bold text-slate-400 tracking-wide mb-2";
   const card = "bg-[#0a1830]/80 border border-white/8 rounded-2xl p-6 space-y-5";
@@ -614,8 +614,8 @@ export default function PersonalityPage() {
           {/* List Header */}
           <div className="p-5 border-b border-white/6 flex-shrink-0">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-                <Brain className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <div className="w-7 h-7 rounded-lg bg-[#E11D48]/10 border border-[#E11D48]/20 flex items-center justify-center">
+                <Brain className="w-3.5 h-3.5 text-[#E11D48]" />
               </div>
               <div>
                 <h1 className="text-sm font-black tracking-tight text-white">Personalidades IA</h1>
@@ -631,7 +631,7 @@ export default function PersonalityPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full bg-black/30 border border-white/6 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37]/30 transition-all"
+                className="w-full bg-black/30 border border-white/6 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#E11D48]/30 transition-all"
               />
             </div>
 
@@ -642,8 +642,8 @@ export default function PersonalityPage() {
               onClick={startNew}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 selected === "new"
-                  ? "bg-[#D4AF37] text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
-                  : "bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20"
+                  ? "bg-[#E11D48] text-black shadow-[0_0_20px_rgba(225,29,72,0.3)]"
+                  : "bg-[#E11D48]/10 text-[#E11D48] border border-[#E11D48]/20 hover:bg-[#E11D48]/20"
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -656,7 +656,7 @@ export default function PersonalityPage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="relative w-8 h-8">
-                  <div className="absolute inset-0 rounded-full border border-t-[#D4AF37] border-white/5 animate-spin" />
+                  <div className="absolute inset-0 rounded-full border border-t-[#E11D48] border-white/5 animate-spin" />
                 </div>
                 <p className="text-[10px] text-slate-600 uppercase tracking-widest">Carregando...</p>
               </div>
@@ -677,7 +677,7 @@ export default function PersonalityPage() {
                     onClick={() => selectPersonality(p)}
                     className={`mx-2 mb-1 rounded-xl cursor-pointer transition-all group relative ${
                       selected === p.id
-                        ? "bg-[#D4AF37]/8 border border-[#D4AF37]/20"
+                        ? "bg-[#E11D48]/8 border border-[#E11D48]/20"
                         : "hover:bg-white/4 border border-transparent hover:border-white/6"
                     }`}
                   >
@@ -686,12 +686,12 @@ export default function PersonalityPage() {
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-base border border-white/8 overflow-hidden"
-                            style={{ backgroundColor: `${p.emoji_cor || "#D4AF37"}18` }}
+                            style={{ backgroundColor: `${p.emoji_cor || "#E11D48"}18` }}
                           >
                             {getEmojiList(p.emoji_tipo)[0] || "✨"}
                           </div>
                           <div className="min-w-0">
-                            <p className={`text-sm font-bold truncate ${selected === p.id ? "text-[#D4AF37]" : "text-white"}`}>
+                            <p className={`text-sm font-bold truncate ${selected === p.id ? "text-[#E11D48]" : "text-white"}`}>
                               {p.nome_ia || "Sem nome"}
                             </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -711,7 +711,7 @@ export default function PersonalityPage() {
                       </div>
                     </div>
                     {selected === p.id && (
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#D4AF37] rounded-full" />
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#E11D48] rounded-full" />
                     )}
                   </motion.div>
                 ))}
@@ -733,11 +733,11 @@ export default function PersonalityPage() {
                 className="flex-1 flex flex-col items-center justify-center gap-6"
               >
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-3xl bg-[#D4AF37]/5 border border-[#D4AF37]/10 flex items-center justify-center">
-                    <Brain className="w-12 h-12 text-[#D4AF37]/20" />
+                  <div className="w-24 h-24 rounded-3xl bg-[#E11D48]/5 border border-[#E11D48]/10 flex items-center justify-center">
+                    <Brain className="w-12 h-12 text-[#E11D48]/20" />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-[#D4AF37]/40" />
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-[#E11D48]/10 border border-[#E11D48]/20 flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-[#E11D48]/40" />
                   </div>
                 </div>
                 <div className="text-center">
@@ -748,7 +748,7 @@ export default function PersonalityPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startNew}
-                  className="flex items-center gap-2 bg-[#D4AF37] text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_25px_rgba(212,175,55,0.25)]"
+                  className="flex items-center gap-2 bg-[#E11D48] text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_25px_rgba(225,29,72,0.25)]"
                 >
                   <Plus className="w-4 h-4" /> Nova Personalidade
                 </motion.button>
@@ -767,7 +767,7 @@ export default function PersonalityPage() {
                     <div className="flex items-center gap-4">
                       <div
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border border-white/8 flex-shrink-0 overflow-hidden"
-                        style={{ backgroundColor: `${fd.emoji_cor || "#D4AF37"}15` }}
+                        style={{ backgroundColor: `${fd.emoji_cor || "#E11D48"}15` }}
                       >
                         {getEmojiList(fd.emoji_tipo)[0] || "✨"}
                       </div>
@@ -799,7 +799,7 @@ export default function PersonalityPage() {
                             onClick={() => setActiveTab(tab)}
                             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                               activeTab === tab
-                                ? "bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/20"
+                                ? "bg-[#E11D48]/15 text-[#E11D48] border border-[#E11D48]/20"
                                 : "text-slate-500 hover:text-slate-300"
                             }`}
                           >
@@ -823,15 +823,15 @@ export default function PersonalityPage() {
                           onClick={() => setActiveSection(sec.key)}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all mb-0.5 relative group ${
                             activeSection === sec.key
-                              ? "bg-[#D4AF37]/8 border border-[#D4AF37]/15"
+                              ? "bg-[#E11D48]/8 border border-[#E11D48]/15"
                               : "hover:bg-white/3 border border-transparent"
                           }`}
                         >
-                          <span className={`flex-shrink-0 ${activeSection === sec.key ? "text-[#D4AF37]" : "text-slate-600 group-hover:text-slate-400"}`}>
+                          <span className={`flex-shrink-0 ${activeSection === sec.key ? "text-[#E11D48]" : "text-slate-600 group-hover:text-slate-400"}`}>
                             {sec.icon}
                           </span>
                           <div className="min-w-0">
-                            <p className={`text-xs font-bold ${activeSection === sec.key ? "text-[#D4AF37]" : "text-slate-400 group-hover:text-slate-300"}`}>
+                            <p className={`text-xs font-bold ${activeSection === sec.key ? "text-[#E11D48]" : "text-slate-400 group-hover:text-slate-300"}`}>
                               {sec.label}
                             </p>
                             <p className="text-[9px] text-slate-600 truncate">{sec.desc}</p>
@@ -840,7 +840,7 @@ export default function PersonalityPage() {
                             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
                           )}
                           {activeSection === sec.key && (
-                            <ChevronRight className="ml-auto w-3 h-3 text-[#D4AF37] flex-shrink-0" />
+                            <ChevronRight className="ml-auto w-3 h-3 text-[#E11D48] flex-shrink-0" />
                           )}
                         </button>
                       ))}
@@ -861,20 +861,20 @@ export default function PersonalityPage() {
                           {/* ─ IDENTIDADE ─ */}
                           {activeSection === "identidade" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <Brain className="w-4 h-4 text-[#D4AF37]" />
+                              <Brain className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Identidade da IA</h3>
                             </div>
 
                             <div className={card}>
                               <div>
-                                <label className={lClass}><span className="flex items-center gap-1"><Mic2 className="w-3 h-3 text-[#D4AF37]/50" />Nome da IA *</span></label>
+                                <label className={lClass}><span className="flex items-center gap-1"><Mic2 className="w-3 h-3 text-[#E11D48]/50" />Nome da IA *</span></label>
                                 <input required type="text" value={fd.nome_ia}
                                   onChange={e => setFormData({ ...formData, nome_ia: e.target.value })}
                                   className={`${iClass} text-base font-semibold`} placeholder="Ex: Clara, Atlas, Nova..."
                                 />
                               </div>
                               <div>
-                                <label className={lClass}><span className="flex items-center gap-1"><Target className="w-3 h-3 text-[#D4AF37]/50" />Objetivo Estratégico</span></label>
+                                <label className={lClass}><span className="flex items-center gap-1"><Target className="w-3 h-3 text-[#E11D48]/50" />Objetivo Estratégico</span></label>
                                 <textarea rows={5} value={fd.personalidade}
                                   onChange={e => setFormData({ ...formData, personalidade: e.target.value })}
                                   className={taClass} placeholder="Defina o propósito desta IA. Ex: Atender clientes, qualificar leads, agendar consultas..."
@@ -884,7 +884,7 @@ export default function PersonalityPage() {
 
                             <div className={card}>
                               <div>
-                                <label className={lClass}><span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-[#D4AF37]/50" />Instruções Base — System Prompt</span></label>
+                                <label className={lClass}><span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-[#E11D48]/50" />Instruções Base — System Prompt</span></label>
                                 <p className="text-[11px] text-slate-500 mb-3">Este é o prompt principal que define o comportamento completo da IA. Seja detalhado.</p>
                                 <textarea rows={18} value={fd.instrucoes_base}
                                   onChange={e => setFormData({ ...formData, instrucoes_base: e.target.value })}
@@ -928,7 +928,7 @@ export default function PersonalityPage() {
                           {/* ─ ENGINE ─ */}
                           {activeSection === "engine" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <Cpu className="w-4 h-4 text-[#D4AF37]" />
+                              <Cpu className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Motor & Comportamento</h3>
                             </div>
 
@@ -939,7 +939,7 @@ export default function PersonalityPage() {
                                   <button key={m.id} type="button" onClick={() => setFormData({ ...formData, model_name: m.id })}
                                     className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left ${
                                       fd.model_name === m.id
-                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                        ? "bg-[#E11D48]/10 border-[#E11D48]/40 text-[#E11D48]"
                                         : "bg-black/20 border-white/5 text-slate-400 hover:border-white/10 hover:text-white"
                                     }`}
                                   >
@@ -961,7 +961,7 @@ export default function PersonalityPage() {
                                   <button key={t.id} type="button" onClick={() => setFormData({ ...formData, tom_voz: t.id })}
                                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
                                       fd.tom_voz === t.id
-                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                        ? "bg-[#E11D48]/10 border-[#E11D48]/40 text-[#E11D48]"
                                         : "bg-black/20 border-white/5 text-slate-400 hover:border-white/10"
                                     }`}
                                   >
@@ -977,24 +977,24 @@ export default function PersonalityPage() {
                               <div className="space-y-5">
                                 <div>
                                   <div className="flex justify-between mb-2">
-                                    <label className={`${lClass} mb-0`}><span className="flex items-center gap-1"><Thermometer className="w-3 h-3 text-[#D4AF37]/40" />Temperatura</span></label>
-                                    <span className="text-xs font-black text-[#D4AF37] bg-[#D4AF37]/10 px-2 py-0.5 rounded-lg">{fd.temperature}</span>
+                                    <label className={`${lClass} mb-0`}><span className="flex items-center gap-1"><Thermometer className="w-3 h-3 text-[#E11D48]/40" />Temperatura</span></label>
+                                    <span className="text-xs font-black text-[#E11D48] bg-[#E11D48]/10 px-2 py-0.5 rounded-lg">{fd.temperature}</span>
                                   </div>
                                   <p className="text-[10px] text-slate-600 mb-2">Baixo = preciso · Alto = criativo</p>
                                   <input type="range" min="0" max="1" step="0.1" value={fd.temperature}
                                     onChange={e => setFormData({ ...formData, temperature: parseFloat(e.target.value) })}
-                                    className="w-full accent-[#D4AF37] h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
+                                    className="w-full accent-[#E11D48] h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
                                   />
                                 </div>
                                 <div>
                                   <div className="flex justify-between mb-2">
                                     <label className={`${lClass} mb-0`}>Max Tokens</label>
-                                    <span className="text-xs font-black text-[#D4AF37] bg-[#D4AF37]/10 px-2 py-0.5 rounded-lg">{fd.max_tokens}</span>
+                                    <span className="text-xs font-black text-[#E11D48] bg-[#E11D48]/10 px-2 py-0.5 rounded-lg">{fd.max_tokens}</span>
                                   </div>
                                   <p className="text-[10px] text-slate-600 mb-2">Limite de tokens por resposta</p>
                                   <input type="range" min="100" max="4000" step="100" value={fd.max_tokens}
                                     onChange={e => setFormData({ ...formData, max_tokens: parseInt(e.target.value) })}
-                                    className="w-full accent-[#D4AF37] h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
+                                    className="w-full accent-[#E11D48] h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer"
                                   />
                                 </div>
                               </div>
@@ -1003,7 +1003,7 @@ export default function PersonalityPage() {
                             <div className="grid grid-cols-2 gap-3">
                               {[
                                 { key: "ativo", label: "Atendimento Ativo", desc: "IA responde clientes", color: "bg-emerald-500" },
-                                { key: "usar_emoji", label: "Usar Emojis", desc: "Mensagens com emojis", color: "bg-[#D4AF37]" },
+                                { key: "usar_emoji", label: "Usar Emojis", desc: "Mensagens com emojis", color: "bg-[#E11D48]" },
                               ].map(({ key, label, desc, color }) => (
                                 <div key={key} className={`${card} !py-4 !space-y-0 flex items-center justify-between`}>
                                   <div>
@@ -1023,7 +1023,7 @@ export default function PersonalityPage() {
                           {/* ─ VENDAS ─ */}
                           {activeSection === "vendas" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
+                              <TrendingUp className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Estratégia de Vendas & Conversão</h3>
                             </div>
 
@@ -1066,10 +1066,10 @@ export default function PersonalityPage() {
                             </div>
 
                             {/* Tour Virtual — Estratégia Inteligente */}
-                            <div className={`${card} !py-4 border border-[#D4AF37]/20 bg-gradient-to-r from-[#D4AF37]/5 to-transparent`}>
+                            <div className={`${card} !py-4 border border-[#E11D48]/20 bg-gradient-to-r from-[#E11D48]/5 to-transparent`}>
                               <div className="flex items-center gap-3 mb-4">
-                                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center">
-                                  <PlayCircle className="w-4 h-4 text-[#D4AF37]" />
+                                <div className="w-8 h-8 rounded-lg bg-[#E11D48]/10 flex items-center justify-center">
+                                  <PlayCircle className="w-4 h-4 text-[#E11D48]" />
                                 </div>
                                 <div>
                                   <p className="text-xs font-black text-white">Estrategia Tour Virtual</p>
@@ -1091,7 +1091,7 @@ export default function PersonalityPage() {
                                     onClick={() => setFormData({...formData, estrategia_tour: opt.value})}
                                     className={`p-2 rounded-lg border text-center transition-all ${
                                       fd.estrategia_tour === opt.value
-                                        ? "border-[#D4AF37] bg-[#D4AF37]/10 text-white"
+                                        ? "border-[#E11D48] bg-[#E11D48]/10 text-white"
                                         : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"
                                     }`}
                                   >
@@ -1111,7 +1111,7 @@ export default function PersonalityPage() {
                                   <button type="button"
                                     onClick={() => setFormData({...formData, tour_perguntar_primeira_visita: !fd.tour_perguntar_primeira_visita})}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all flex-shrink-0 ${
-                                      fd.tour_perguntar_primeira_visita ? "bg-[#D4AF37]" : "bg-slate-700"
+                                      fd.tour_perguntar_primeira_visita ? "bg-[#E11D48]" : "bg-slate-700"
                                     }`}
                                   >
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all shadow ${
@@ -1150,7 +1150,7 @@ export default function PersonalityPage() {
                           {/* ─ BRANDING ─ */}
                           {activeSection === "branding" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                              <Sparkles className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Branding & Identidade Visual</h3>
                             </div>
 
@@ -1174,7 +1174,7 @@ export default function PersonalityPage() {
                             <div className={card}>
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">Emojis Rotativos da IA</p>
+                                  <p className="text-xs font-black text-[#E11D48] uppercase tracking-widest">Emojis Rotativos da IA</p>
                                   <p className="text-[10px] text-slate-500 mt-0.5">A IA alterna entre os emojis escolhidos. Selecione até 6.</p>
                                 </div>
                                 <span className="text-[10px] font-black text-slate-500 bg-white/5 px-2 py-1 rounded-lg">
@@ -1188,7 +1188,7 @@ export default function PersonalityPage() {
                                   <span className="text-[10px] text-slate-600 self-center">Nenhum selecionado — escolha abaixo</span>
                                 ) : getEmojiList(fd.emoji_tipo).map((e, i) => (
                                   <button key={i} type="button" onClick={() => toggleEmoji(e)}
-                                    className="flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-lg px-2 py-1 text-base hover:bg-red-500/10 hover:border-red-500/30 transition-all group"
+                                    className="flex items-center gap-1 bg-[#E11D48]/10 border border-[#E11D48]/30 rounded-lg px-2 py-1 text-base hover:bg-red-500/10 hover:border-red-500/30 transition-all group"
                                     title="Clique para remover"
                                   >
                                     {e}
@@ -1203,7 +1203,7 @@ export default function PersonalityPage() {
                                   <button key={cat.label} type="button" onClick={() => setEmojiCatIdx(i)}
                                     className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all ${
                                       emojiCatIdx === i
-                                        ? "bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30"
+                                        ? "bg-[#E11D48]/15 text-[#E11D48] border border-[#E11D48]/30"
                                         : "text-slate-500 hover:text-slate-300 bg-white/3 border border-transparent"
                                     }`}
                                   >{cat.label}</button>
@@ -1219,7 +1219,7 @@ export default function PersonalityPage() {
                                       title={selected ? "Remover" : getEmojiList(fd.emoji_tipo).length >= 6 ? "Máximo atingido" : "Adicionar"}
                                       className={`h-9 flex items-center justify-center text-lg rounded-lg transition-all ${
                                         selected
-                                          ? "bg-[#D4AF37]/20 border border-[#D4AF37]/50 scale-110"
+                                          ? "bg-[#E11D48]/20 border border-[#E11D48]/50 scale-110"
                                           : getEmojiList(fd.emoji_tipo).length >= 6
                                             ? "opacity-30 cursor-not-allowed"
                                             : "hover:bg-white/8 border border-transparent hover:scale-110"
@@ -1236,18 +1236,18 @@ export default function PersonalityPage() {
                                 <label className={lClass}>Cor de Branding</label>
                                 <div className="flex items-center gap-3">
                                   <div className="relative">
-                                    <input type="color" value={fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#D4AF37"}
+                                    <input type="color" value={fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#E11D48"}
                                       onChange={e => setFormData({...formData, emoji_cor: e.target.value})}
                                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     />
                                     <div className="w-11 h-11 rounded-xl border-2 border-white/10 shadow-md"
-                                      style={{ backgroundColor: fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#D4AF37" }}
+                                      style={{ backgroundColor: fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#E11D48" }}
                                     />
                                   </div>
                                   <input type="text" value={fd.emoji_cor}
                                     onChange={e => setFormData({...formData, emoji_cor: e.target.value})}
-                                    className="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-xs font-mono text-[#D4AF37] focus:outline-none focus:border-[#D4AF37]/30"
-                                    placeholder="#D4AF37"
+                                    className="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-xs font-mono text-[#E11D48] focus:outline-none focus:border-[#E11D48]/30"
+                                    placeholder="#E11D48"
                                   />
                                 </div>
                               </div>
@@ -1259,7 +1259,7 @@ export default function PersonalityPage() {
                                   const list = getEmojiList(fd.emoji_tipo);
                                   const e0 = list[0] || "✨";
                                   const e1 = list[1] || e0;
-                                  const cor = fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#D4AF37";
+                                  const cor = fd.emoji_cor?.startsWith('#') ? fd.emoji_cor : "#E11D48";
                                   return (<>
                                     <div className="max-w-[85%]">
                                       <div className="rounded-2xl rounded-tl-none p-3 text-[11px] font-medium text-white"
@@ -1283,7 +1283,7 @@ export default function PersonalityPage() {
                           {/* ─ CONTEXTO ─ */}
                           {activeSection === "contexto" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <ListChecks className="w-4 h-4 text-[#D4AF37]" />
+                              <ListChecks className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Contexto & Regras</h3>
                             </div>
                             <div className={card}>
@@ -1345,7 +1345,7 @@ export default function PersonalityPage() {
                           {/* ─ HORÁRIOS ─ */}
                           {activeSection === "horarios" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <Clock className="w-4 h-4 text-[#D4AF37]" />
+                              <Clock className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Horário de Atendimento</h3>
                             </div>
 
@@ -1373,7 +1373,7 @@ export default function PersonalityPage() {
                                         }
                                       }}
                                       className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest border transition-all ${
-                                        atual === tipo ? "bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/30" : "bg-black/20 text-slate-500 border-white/5 hover:text-white"
+                                        atual === tipo ? "bg-[#E11D48]/10 text-[#E11D48] border-[#E11D48]/30" : "bg-black/20 text-slate-500 border-white/5 hover:text-white"
                                       }`}
                                     >
                                       {tipo === "dia_todo" ? "🌐 Dia todo (24h)" : "🕐 Horário específico"}
@@ -1398,7 +1398,7 @@ export default function PersonalityPage() {
                                       <div key={key} className="bg-black/20 border border-white/5 rounded-xl p-3">
                                         <div className="flex items-center gap-3 flex-wrap">
                                           <button type="button" onClick={() => setDia(diaAtivo ? [] : [{ inicio: "08:00", fim: "18:00" }])}
-                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${diaAtivo ? "bg-[#D4AF37]" : "bg-slate-700"}`}
+                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${diaAtivo ? "bg-[#E11D48]" : "bg-slate-700"}`}
                                           >
                                             <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-all shadow ${diaAtivo ? "translate-x-4" : "translate-x-0.5"}`} />
                                           </button>
@@ -1423,7 +1423,7 @@ export default function PersonalityPage() {
                                                       np[i] = { inicio: newIni, fim: newFim };
                                                       setDia(np);
                                                     }}
-                                                    className="bg-[#0a1628] border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-[#D4AF37]/30"
+                                                    className="bg-[#0a1628] border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-[#E11D48]/30"
                                                   />
                                                   <span className="text-slate-600 text-xs">–</span>
                                                   <input type="time" value={p.fim}
@@ -1431,7 +1431,7 @@ export default function PersonalityPage() {
                                                     className={`bg-[#0a1628] border rounded-lg px-2 py-1 text-xs text-white focus:outline-none transition-colors ${
                                                       periodoInvalido
                                                         ? "border-amber-500/60 focus:border-amber-500/80"
-                                                        : "border-white/10 focus:border-[#D4AF37]/30"
+                                                        : "border-white/10 focus:border-[#E11D48]/30"
                                                     }`}
                                                     title={periodoInvalido ? "Fim deve ser maior que o início" : undefined}
                                                   />
@@ -1442,7 +1442,7 @@ export default function PersonalityPage() {
                                               ); })}
                                               {periodos.length < 2 && (
                                                 <button type="button" onClick={() => setDia([...periodos, { inicio: "14:00", fim: "18:00" }])}
-                                                  className="text-[10px] text-[#D4AF37]/60 hover:text-[#D4AF37] flex items-center gap-1 font-bold"
+                                                  className="text-[10px] text-[#E11D48]/60 hover:text-[#E11D48] flex items-center gap-1 font-bold"
                                                 >
                                                   <Plus className="w-3 h-3" /> período
                                                 </button>
@@ -1463,13 +1463,13 @@ export default function PersonalityPage() {
                           {/* ─ VOZ DA IA (TTS) ─ */}
                           {activeSection === "voz" && (<>
                             <div className="flex items-center gap-2 pb-1 border-b border-white/5 mb-5">
-                              <Mic2 className="w-4 h-4 text-[#D4AF37]" />
+                              <Mic2 className="w-4 h-4 text-[#E11D48]" />
                               <h3 className="font-black text-sm text-white uppercase tracking-wider">Voz da IA — Resposta por Áudio</h3>
                             </div>
 
                             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
                               Quando ativado, se o cliente enviar um <span className="text-white font-bold">áudio</span> no WhatsApp,
-                              a IA responderá com um <span className="text-[#D4AF37] font-bold">áudio PTT</span> além do texto.
+                              a IA responderá com um <span className="text-[#E11D48] font-bold">áudio PTT</span> além do texto.
                               A IA espelha o canal do cliente — texto → texto, áudio → áudio + texto.
                             </p>
 
@@ -1477,13 +1477,13 @@ export default function PersonalityPage() {
                             <div className={`${card} !py-4 !space-y-0 flex items-center justify-between`}>
                               <div>
                                 <p className="text-xs font-black text-white flex items-center gap-2">
-                                  <Mic2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+                                  <Mic2 className="w-3.5 h-3.5 text-[#E11D48]" />
                                   Resposta por Áudio
                                 </p>
                                 <p className="text-[10px] text-slate-500 mt-0.5">IA responde com áudio quando cliente envia áudio</p>
                               </div>
                               <button type="button" onClick={() => setFormData({ ...formData, tts_ativo: !fd.tts_ativo })}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all flex-shrink-0 ${fd.tts_ativo ? "bg-[#D4AF37]" : "bg-slate-700"}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all flex-shrink-0 ${fd.tts_ativo ? "bg-[#E11D48]" : "bg-slate-700"}`}
                               >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all shadow ${fd.tts_ativo ? "translate-x-6" : "translate-x-1"}`} />
                               </button>
@@ -1502,7 +1502,7 @@ export default function PersonalityPage() {
                                     <button key={f.id} type="button" onClick={() => setTtsGenderFilter(f.id)}
                                       className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all ${
                                         ttsGenderFilter === f.id
-                                          ? "bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/30"
+                                          ? "bg-[#E11D48]/10 text-[#E11D48] border-[#E11D48]/30"
                                           : "bg-black/20 text-slate-500 border-white/5 hover:text-white"
                                       }`}
                                     >
@@ -1525,7 +1525,7 @@ export default function PersonalityPage() {
                                         <div key={v.nome}
                                           className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                                             isSelected
-                                              ? "bg-[#D4AF37]/10 border-[#D4AF37]/40"
+                                              ? "bg-[#E11D48]/10 border-[#E11D48]/40"
                                               : "bg-black/20 border-white/5 hover:border-white/10"
                                           }`}
                                           onClick={() => setFormData({ ...formData, tts_voz: v.nome })}
@@ -1533,9 +1533,9 @@ export default function PersonalityPage() {
                                           <span className="text-lg">{v.genero === "feminina" ? "👩" : "👨"}</span>
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                                              <p className={`text-xs font-black ${isSelected ? "text-[#D4AF37]" : "text-slate-300"}`}>{v.nome}</p>
+                                              <p className={`text-xs font-black ${isSelected ? "text-[#E11D48]" : "text-slate-300"}`}>{v.nome}</p>
                                               <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
-                                                isSelected ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/5 text-slate-500"
+                                                isSelected ? "bg-[#E11D48]/20 text-[#E11D48]" : "bg-white/5 text-slate-500"
                                               }`}>{v.tag}</span>
                                             </div>
                                             <p className="text-[10px] text-slate-500 mt-0.5">{v.descricao}</p>
@@ -1546,14 +1546,14 @@ export default function PersonalityPage() {
                                               disabled={!!ttsPreviewLoading}
                                               className={`p-2 rounded-lg border transition-all ${
                                                 isPreviewing
-                                                  ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#D4AF37] animate-pulse"
-                                                  : "bg-black/30 border-white/5 text-slate-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/20"
+                                                  ? "bg-[#E11D48]/20 border-[#E11D48]/40 text-[#E11D48] animate-pulse"
+                                                  : "bg-black/30 border-white/5 text-slate-400 hover:text-[#E11D48] hover:border-[#E11D48]/20"
                                               }`}
                                               title="Ouvir preview"
                                             >
                                               {isPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
                                             </button>
-                                            {isSelected && <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" />}
+                                            {isSelected && <CheckCircle2 className="w-4 h-4 text-[#E11D48]" />}
                                           </div>
                                         </div>
                                       );
@@ -1574,8 +1574,8 @@ export default function PersonalityPage() {
                               </div>
 
                               {/* Info box */}
-                              <div className="flex items-start gap-2.5 p-3.5 bg-[#D4AF37]/5 border border-[#D4AF37]/10 rounded-xl">
-                                <Zap className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+                              <div className="flex items-start gap-2.5 p-3.5 bg-[#E11D48]/5 border border-[#E11D48]/10 rounded-xl">
+                                <Zap className="w-4 h-4 text-[#E11D48] flex-shrink-0 mt-0.5" />
                                 <div className="text-[10px] text-slate-400 leading-relaxed">
                                   <p><span className="text-white font-bold">Gemini TTS</span> — 30 vozes neurais Google com qualidade profissional em PT-BR.</p>
                                   <p className="mt-1">Tier grátis disponível. Clique em <PlayCircle className="w-3 h-3 inline" /> para ouvir cada voz antes de escolher.</p>
@@ -1610,7 +1610,7 @@ export default function PersonalityPage() {
                                 p?.saudacao_personalizada
                               );
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] text-xs font-bold hover:bg-[#D4AF37]/20 transition-all"
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E11D48]/10 text-[#E11D48] text-xs font-bold hover:bg-[#E11D48]/20 transition-all"
                           >
                             <Plus className="w-3 h-3" /> Nova conversa
                           </button>
@@ -1622,7 +1622,7 @@ export default function PersonalityPage() {
                               onClick={() => setPgActiveId(s.id)}
                               className={`group px-3 py-2.5 rounded-lg cursor-pointer transition-all text-xs ${
                                 s.id === pgActiveId
-                                  ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-white"
+                                  ? "bg-[#E11D48]/10 border border-[#E11D48]/20 text-white"
                                   : "hover:bg-white/5 text-slate-400"
                               }`}
                             >
@@ -1724,7 +1724,7 @@ export default function PersonalityPage() {
                               >
                                 <div className={`max-w-[75%] group relative ${
                                   m.role === "user"
-                                    ? "bg-[#D4AF37] text-black rounded-2xl rounded-br-md"
+                                    ? "bg-[#E11D48] text-black rounded-2xl rounded-br-md"
                                     : "bg-white/5 text-slate-200 border border-white/8 rounded-2xl rounded-bl-md"
                                 }`}>
                                   <div
@@ -1749,7 +1749,7 @@ export default function PersonalityPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="flex justify-start"
                               >
-                                <div className="max-w-[75%] bg-white/5 text-slate-200 border border-[#D4AF37]/20 rounded-2xl rounded-bl-md">
+                                <div className="max-w-[75%] bg-white/5 text-slate-200 border border-[#E11D48]/20 rounded-2xl rounded-bl-md">
                                   <div
                                     className="px-4 py-3 text-sm leading-relaxed"
                                     dangerouslySetInnerHTML={{ __html: formatWhatsApp(streamingText) }}
@@ -1763,9 +1763,9 @@ export default function PersonalityPage() {
                               <div className="flex justify-start">
                                 <div className="bg-white/5 border border-white/8 rounded-2xl rounded-bl-md px-5 py-4">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: "0ms" }} />
-                                    <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: "150ms" }} />
-                                    <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-bounce" style={{ animationDelay: "300ms" }} />
+                                    <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-bounce" style={{ animationDelay: "0ms" }} />
+                                    <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-bounce" style={{ animationDelay: "150ms" }} />
+                                    <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-bounce" style={{ animationDelay: "300ms" }} />
                                   </div>
                                 </div>
                               </div>
@@ -1792,14 +1792,14 @@ export default function PersonalityPage() {
                           placeholder={selected === "new" ? "Salve a personalidade primeiro..." : "Digite sua mensagem... (Shift+Enter para nova linha)"}
                           disabled={selected === "new"}
                           rows={1}
-                          className="w-full bg-[#0a1628]/80 border border-white/8 rounded-xl px-4 py-3.5 pr-14 text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37]/40 transition-all text-sm resize-none"
+                          className="w-full bg-[#0a1628]/80 border border-white/8 rounded-xl px-4 py-3.5 pr-14 text-white placeholder-slate-600 focus:outline-none focus:border-[#E11D48]/40 transition-all text-sm resize-none"
                           style={{ minHeight: "48px", maxHeight: "120px" }}
                         />
                         <button
                           type="button"
                           onClick={runTest}
                           disabled={testLoading || !testMessage.trim() || selected === "new"}
-                          className="absolute right-2 bottom-2 p-2.5 bg-[#D4AF37] text-black rounded-lg hover:bg-[#D4AF37]/90 transition-all disabled:opacity-30"
+                          className="absolute right-2 bottom-2 p-2.5 bg-[#E11D48] text-black rounded-lg hover:bg-[#E11D48]/90 transition-all disabled:opacity-30"
                         >
                           <Send className="w-4 h-4" />
                         </button>
@@ -1840,7 +1840,7 @@ export default function PersonalityPage() {
                       whileTap={{ scale: 0.98 }}
                       onClick={doSave}
                       disabled={saving}
-                      className="flex items-center gap-2.5 bg-[#D4AF37] text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.35)] transition-all disabled:opacity-50"
+                      className="flex items-center gap-2.5 bg-[#E11D48] text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.35)] transition-all disabled:opacity-50"
                     >
                       {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
                         : success ? <><CheckCircle2 className="w-4 h-4" /> Salvo!</>
@@ -1857,8 +1857,8 @@ export default function PersonalityPage() {
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.1); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225,29,72,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(225,29,72,0.2); }
       `}</style>
     </div>
   );
