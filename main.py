@@ -4043,15 +4043,21 @@ async def processar_ia_e_responder(
                     _contexto_agendamento += "\nEste cliente NÃO tem agendamentos futuros.\n"
 
                 _contexto_agendamento += """
-REGRAS DE AGENDAMENTO (OBRIGATÓRIO):
+REGRAS DE AGENDAMENTO (OBRIGATÓRIO — SIGA À RISCA):
 - Para agendar, você PRECISA de: dia, horário e profissional (se houver mais de 1).
 - Se o cliente não escolheu dia/horário, mostre os horários disponíveis e pergunte qual prefere.
 - Se o cliente não escolheu profissional e há mais de 1, pergunte qual prefere.
 - Quando tiver TODOS os dados, confirme com o cliente ANTES de agendar.
-- Use a tag <AGENDAR:barbeiro_nome|YYYY-MM-DD HH:MM|servico_nome> no final da resposta para o sistema criar o agendamento automaticamente.
-- Exemplo: <AGENDAR:João|2026-04-10 14:00|Corte masculino>
-- Para CANCELAR: use <CANCELAR_AGENDAMENTO:id>
+- PREÇOS: Use SOMENTE os preços listados acima nos Serviços. NUNCA invente preços. Se não souber o preço, diga que vai verificar.
 - NUNCA invente horários que não estão na lista de disponibilidade acima.
+
+⚠️ TAG OBRIGATÓRIA — CRÍTICO:
+Quando o cliente CONFIRMAR o agendamento (disser "sim", "pode sim", "quero", "confirma", etc.), você DEVE OBRIGATORIAMENTE incluir a tag abaixo NO FINAL da sua resposta. SEM ESSA TAG O AGENDAMENTO NÃO É CRIADO NO SISTEMA.
+Formato: <AGENDAR:nome_barbeiro|YYYY-MM-DD HH:MM|nome_servico>
+Exemplo: <AGENDAR:João|2026-04-10 14:00|Corte masculino>
+
+- Para CANCELAR: use <CANCELAR_AGENDAMENTO:id_do_agendamento>
+- A tag NÃO aparece para o cliente, é processada internamente pelo sistema.
 """
                 contexto_precarregado += _contexto_agendamento
                 logger.info(f"💈 Contexto de agendamento injetado para conv {conversation_id}")
@@ -4816,9 +4822,15 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 logger.warning(f"⚠️ [Tour] IA usou <SEND_VIDEO> mas unidade não tem link_tour_virtual!")
 
         # --- Handler de AGENDAMENTO automático via tag <AGENDAR:...> ---
-        _agendar_match = re.search(r'<AGENDAR:([^|]+)\|([^|]+)\|([^>]+)>', resposta_texto or '')
+        # Tenta múltiplas variações da tag (IA pode gerar com espaços, aspas, etc.)
+        _agendar_match = (
+            re.search(r'<AGENDAR:\s*([^|]+)\|([^|]+)\|([^>]+)>', resposta_texto or '') or
+            re.search(r'\[AGENDAR:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', resposta_texto or '') or
+            re.search(r'AGENDAR:\s*([^|]+)\|([^|]+)\|([^\s>)\]]+)', resposta_texto or '')
+        )
         if _agendar_match and db_pool:
-            resposta_texto = re.sub(r'<AGENDAR:[^>]+>', '', resposta_texto).strip()
+            resposta_texto = re.sub(r'[\[<]?AGENDAR:[^>\]]*[>\]]?', '', resposta_texto).strip()
+            logger.info(f"📅 [AGENDAR] Tag detectada para conv {conversation_id}: barb='{_agendar_match.group(1)}' data='{_agendar_match.group(2)}' serv='{_agendar_match.group(3)}'")
             try:
                 from src.services.agendamento_service import (
                     criar_agendamento, buscar_barbeiro_por_nome, buscar_servico_por_nome,
@@ -4830,12 +4842,22 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
 
                 _barb = await buscar_barbeiro_por_nome(db_pool, empresa_id, _barb_nome)
                 _serv = await buscar_servico_por_nome(db_pool, empresa_id, _serv_nome)
-                _data_hora = datetime.strptime(_data_str, "%Y-%m-%d %H:%M")
+
+                # Tenta múltiplos formatos de data
+                _data_hora = None
+                for _fmt in ["%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
+                    try:
+                        _data_hora = datetime.strptime(_data_str, _fmt)
+                        break
+                    except ValueError:
+                        continue
+                if not _data_hora:
+                    logger.error(f"❌ [AGENDAR] Formato de data inválido: '{_data_str}'")
 
                 _fone_ag = await redis_client.get(f"fone_cliente:{conversation_id}")
                 _fone_ag_limpo = "".join(filter(str.isdigit, str(_fone_ag))) if _fone_ag else ""
 
-                if _barb:
+                if _barb and _data_hora:
                     _ag = await criar_agendamento(
                         db_pool, empresa_id, _barb['id'], _data_hora,
                         nome_cliente, _fone_ag_limpo,
@@ -4844,13 +4866,21 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                         conversation_id=conversation_id,
                     )
                     if _ag:
-                        logger.info(f"✅ Agendamento #{_ag['id']} criado via IA para conv {conversation_id}")
+                        logger.info(f"✅ Agendamento #{_ag['id']} criado via IA para conv {conversation_id}: {_barb_nome} em {_data_str}")
                     else:
                         logger.warning(f"⚠️ Conflito ao criar agendamento via IA para conv {conversation_id}")
-                else:
-                    logger.warning(f"⚠️ Barbeiro '{_barb_nome}' não encontrado para agendamento via IA")
+                elif not _barb:
+                    logger.warning(f"⚠️ Barbeiro '{_barb_nome}' não encontrado para agendamento via IA (empresa={empresa_id})")
             except Exception as e:
-                logger.error(f"Erro ao processar tag <AGENDAR>: {e}")
+                logger.error(f"Erro ao processar tag <AGENDAR>: {e}", exc_info=True)
+        elif _intencao_agendar and db_pool and resposta_texto:
+            # Fallback: IA confirmou agendamento mas esqueceu a tag
+            _confirmou_sem_tag = bool(re.search(
+                r'(confirmad[oa]|agendad[oa]|reserva.*confirmad|marcad[oa]|está marcad|reserv[ao].*feit)',
+                resposta_texto.lower()
+            ))
+            if _confirmou_sem_tag:
+                logger.warning(f"⚠️ [AGENDAR] IA confirmou agendamento para conv {conversation_id} mas NÃO incluiu a tag <AGENDAR:>! Resposta: {resposta_texto[:200]}")
 
         # --- Handler de CANCELAMENTO via tag <CANCELAR_AGENDAMENTO:id> ---
         _cancelar_match = re.search(r'<CANCELAR_AGENDAMENTO:(\d+)>', resposta_texto or '')
