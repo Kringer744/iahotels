@@ -4943,13 +4943,94 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
             except Exception as e:
                 logger.error(f"Erro ao processar tag <AGENDAR>: {e}", exc_info=True)
         elif _intencao_agendar and db_pool and resposta_texto:
-            # Fallback: IA confirmou agendamento mas esqueceu a tag
+            # Fallback: IA confirmou agendamento mas esqueceu a tag — tenta criar automaticamente
             _confirmou_sem_tag = bool(re.search(
-                r'(confirmad[oa]|agendad[oa]|marcad[oa]|está marcad|agendamento.*feit)',
+                r'(confirmad[oa]|agendad[oa]|marcad[oa]|está marcad|agendamento.*feit|reserva.*confirmad)',
                 resposta_texto.lower()
             ))
             if _confirmou_sem_tag:
-                logger.warning(f"⚠️ [AGENDAR] IA confirmou agendamento para conv {conversation_id} mas NÃO incluiu a tag <AGENDAR:>! Resposta: {resposta_texto[:200]}")
+                logger.warning(f"⚠️ [AGENDAR-FALLBACK] IA confirmou sem tag! Tentando extrair dados... Resposta: {resposta_texto[:200]}")
+                try:
+                    from src.services.agendamento_service import (
+                        criar_agendamento, buscar_barbeiro_por_nome, buscar_servico_por_nome,
+                        parse_data_texto, parse_hora_texto, listar_barbeiros, listar_servicos,
+                    )
+                    # Extrair data/hora da resposta
+                    _resp_lower = resposta_texto.lower()
+                    _fallback_data = parse_data_texto(_resp_lower)
+                    _fallback_hora = parse_hora_texto(_resp_lower)
+
+                    # Se não achou na resposta, tenta do texto do cliente
+                    if not _fallback_data and texto_cliente_unificado:
+                        _fallback_data = parse_data_texto(texto_cliente_unificado)
+                    if not _fallback_hora and texto_cliente_unificado:
+                        _fallback_hora = parse_hora_texto(texto_cliente_unificado)
+
+                    # Extrair barbeiro — procura nomes conhecidos na resposta
+                    _fallback_barb = None
+                    _all_barbs = await listar_barbeiros(db_pool, empresa_id)
+                    for _b in _all_barbs:
+                        if _b['nome'].lower() in _resp_lower:
+                            _fallback_barb = _b
+                            break
+                    # Se só tem 1 barbeiro, usa ele
+                    if not _fallback_barb and len(_all_barbs) == 1:
+                        _fallback_barb = _all_barbs[0]
+
+                    # Extrair serviço — procura nomes conhecidos na resposta
+                    _fallback_serv = None
+                    _all_servs = await listar_servicos(db_pool, empresa_id)
+                    for _s in _all_servs:
+                        if _s['nome'].lower() in _resp_lower:
+                            _fallback_serv = _s
+                            break
+                    if not _fallback_serv and len(_all_servs) == 1:
+                        _fallback_serv = _all_servs[0]
+
+                    if _fallback_data and _fallback_hora and _fallback_barb:
+                        _fb_hora_parts = list(map(int, _fallback_hora.split(":")))
+                        _fb_data_hora = _fallback_data.replace(hour=_fb_hora_parts[0], minute=_fb_hora_parts[1], second=0)
+
+                        _fone_fb = await redis_client.get(f"fone_cliente:{conversation_id}")
+                        _fone_fb_limpo = "".join(filter(str.isdigit, str(_fone_fb))) if _fone_fb else ""
+
+                        _ag_fb = await criar_agendamento(
+                            db_pool, empresa_id, _fallback_barb['id'], _fb_data_hora,
+                            nome_cliente, _fone_fb_limpo,
+                            servico_id=_fallback_serv['id'] if _fallback_serv else None,
+                            duracao_minutos=_fallback_serv['duracao_minutos'] if _fallback_serv else 30,
+                            conversation_id=conversation_id,
+                        )
+                        if _ag_fb:
+                            logger.info(f"✅ [AGENDAR-FALLBACK] Agendamento #{_ag_fb['id']} criado! barb={_fallback_barb['nome']} data={_fb_data_hora}")
+                            # Notificar barbeiro
+                            _fb_barb_fone = _fallback_barb.get('telefone', '')
+                            if _fb_barb_fone:
+                                try:
+                                    _fb_integ = await carregar_integracao(empresa_id, 'uazapi')
+                                    if _fb_integ:
+                                        from src.services.agendamento_service import DIAS_SEMANA_PT
+                                        _fb_dia_nome = DIAS_SEMANA_PT.get(_fb_data_hora.weekday(), "")
+                                        _fb_msg = f"📅 *Novo Agendamento!*\n\n👤 Cliente: {nome_cliente}\n📆 {_fb_dia_nome.capitalize()}, {_fb_data_hora.strftime('%d/%m')} às {_fb_data_hora.strftime('%H:%M')}\n✂️ {_fallback_serv['nome'] if _fallback_serv else 'Corte'}\n\nPrepare-se! 💈"
+                                        _fb_fone_limpo = "".join(filter(str.isdigit, _fb_barb_fone))
+                                        if not _fb_fone_limpo.startswith("55"):
+                                            _fb_fone_limpo = "55" + _fb_fone_limpo
+                                        from src.services.uazapi_client import UazAPIClient
+                                        _fb_uaz = UazAPIClient(_fb_integ['api_url'], _fb_integ['token'])
+                                        await _fb_uaz.send_text(_fb_fone_limpo, _fb_msg)
+                                        logger.info(f"📲 [AGENDAR-FALLBACK] Barbeiro {_fallback_barb['nome']} notificado")
+                                except Exception as _notif_err:
+                                    logger.warning(f"⚠️ Falha ao notificar barbeiro (fallback): {_notif_err}")
+                        else:
+                            logger.warning(f"⚠️ [AGENDAR-FALLBACK] Conflito ao criar agendamento")
+                    else:
+                        _missing = []
+                        if not _fallback_data: _missing.append("data")
+                        if not _fallback_hora: _missing.append("hora")
+                        if not _fallback_barb: _missing.append("barbeiro")
+                        logger.warning(f"⚠️ [AGENDAR-FALLBACK] Dados insuficientes para criar: faltam {', '.join(_missing)}")
+                except Exception as _fb_err:
+                    logger.error(f"❌ [AGENDAR-FALLBACK] Erro: {_fb_err}", exc_info=True)
 
         # --- Handler de CANCELAMENTO via tag <CANCELAR_AGENDAMENTO:id> ---
         _cancelar_match = re.search(r'<CANCELAR_AGENDAMENTO:(\d+)>', resposta_texto or '')
