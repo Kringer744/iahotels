@@ -85,7 +85,7 @@ export default function FAQPage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full" />
-                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em]">Concierge IA</span>
+                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em]">Barber IA</span>
               </div>
               <h1 className="text-4xl font-black tracking-tight" style={{ background: "linear-gradient(135deg,#fff 0%,#D4AF37 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 Base de Conhecimento

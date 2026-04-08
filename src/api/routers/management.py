@@ -58,6 +58,11 @@ class PersonalityUpdate(BaseModel):
     estrategia_tour: Optional[str] = None
     tour_perguntar_primeira_visita: Optional[bool] = None
     tour_mensagem_custom: Optional[str] = None
+    msg_confirmacao_agendamento: Optional[str] = None
+    msg_lembrete_1d: Optional[str] = None
+    msg_lembrete_1h: Optional[str] = None
+    msg_avaliacao: Optional[str] = None
+    msg_avaliacao_obrigado: Optional[str] = None
 
 # Campos string do PersonalityCreate — definido fora da classe para evitar
 # conflito com atributos privados do Pydantic V2 (prefixo _)
@@ -118,6 +123,11 @@ class PersonalityCreate(BaseModel):
     estrategia_tour: Optional[str] = "smart"
     tour_perguntar_primeira_visita: Optional[bool] = True
     tour_mensagem_custom: Optional[str] = None
+    msg_confirmacao_agendamento: Optional[str] = None
+    msg_lembrete_1d: Optional[str] = None
+    msg_lembrete_1h: Optional[str] = None
+    msg_avaliacao: Optional[str] = None
+    msg_avaliacao_obrigado: Optional[str] = None
 
     model_config = {"extra": "allow"}
 
@@ -212,7 +222,9 @@ async def get_personality(token_payload: dict = Depends(get_current_user_token))
                   exemplos, palavras_proibidas, despedida_personalizada,
                   regras_formatacao, regras_seguranca,
                   emoji_tipo, emoji_cor,
-                  tts_ativo, tts_voz
+                  tts_ativo, tts_voz,
+                  msg_confirmacao_agendamento, msg_lembrete_1d, msg_lembrete_1h,
+                  msg_avaliacao, msg_avaliacao_obrigado
            FROM personalidade_ia
            WHERE empresa_id = $1
            LIMIT 1""",
@@ -337,7 +349,9 @@ async def list_personalities(token_payload: dict = Depends(get_current_user_toke
                       emoji_tipo, emoji_cor,
                       tts_ativo, tts_voz,
                       oferecer_tour, estrategia_tour,
-                      tour_perguntar_primeira_visita, tour_mensagem_custom
+                      tour_perguntar_primeira_visita, tour_mensagem_custom,
+                      msg_confirmacao_agendamento, msg_lembrete_1d, msg_lembrete_1h,
+                      msg_avaliacao, msg_avaliacao_obrigado
                FROM personalidade_ia
                WHERE empresa_id = $1
                ORDER BY ativo DESC, id DESC""",
@@ -397,8 +411,10 @@ async def create_personality(
                 emoji_tipo, emoji_cor,
                 tts_ativo, tts_voz,
                 oferecer_tour,
+                msg_confirmacao_agendamento, msg_lembrete_1d, msg_lembrete_1h,
+                msg_avaliacao, msg_avaliacao_obrigado,
                 created_at, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,NOW(),NOW())
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,NOW(),NOW())
                RETURNING id""",
             empresa_id, data.nome_ia, data.personalidade, data.instrucoes_base,
             data.tom_voz, data.model_name, data.temperature, data.max_tokens, data.ativo, data.usar_emoji,
@@ -411,7 +427,9 @@ async def create_personality(
             data.regras_formatacao, data.regras_seguranca,
             data.emoji_tipo, data.emoji_cor,
             data.tts_ativo if data.tts_ativo is not None else True, data.tts_voz or "Kore",
-            data.oferecer_tour if data.oferecer_tour is not None else True
+            data.oferecer_tour if data.oferecer_tour is not None else True,
+            data.msg_confirmacao_agendamento, data.msg_lembrete_1d, data.msg_lembrete_1h,
+            data.msg_avaliacao, data.msg_avaliacao_obrigado
         )
         new_id = row["id"]
         
@@ -477,12 +495,16 @@ async def update_personality_by_id(
                    oferecer_tour=$36,
                    estrategia_tour=$37, tour_perguntar_primeira_visita=$38,
                    tour_mensagem_custom=$39,
+                   msg_confirmacao_agendamento=$40, msg_lembrete_1d=$41,
+                   msg_lembrete_1h=$42, msg_avaliacao=$43, msg_avaliacao_obrigado=$44,
                    updated_at=NOW()
-               WHERE id=$40 AND empresa_id=$41""",
+               WHERE id=$45 AND empresa_id=$46""",
             *_base_params,
             data.estrategia_tour or "smart",
             data.tour_perguntar_primeira_visita if data.tour_perguntar_primeira_visita is not None else True,
             data.tour_mensagem_custom,
+            data.msg_confirmacao_agendamento, data.msg_lembrete_1d,
+            data.msg_lembrete_1h, data.msg_avaliacao, data.msg_avaliacao_obrigado,
             pid, empresa_id
         )
     except Exception:
@@ -515,12 +537,16 @@ async def update_personality_by_id(
                        oferecer_tour=$36,
                        estrategia_tour=$37, tour_perguntar_primeira_visita=$38,
                        tour_mensagem_custom=$39,
+                       msg_confirmacao_agendamento=$40, msg_lembrete_1d=$41,
+                       msg_lembrete_1h=$42, msg_avaliacao=$43, msg_avaliacao_obrigado=$44,
                        updated_at=NOW()
-                   WHERE id=$40 AND empresa_id=$41""",
+                   WHERE id=$45 AND empresa_id=$46""",
                 *_base_params,
                 data.estrategia_tour or "smart",
                 data.tour_perguntar_primeira_visita if data.tour_perguntar_primeira_visita is not None else True,
                 data.tour_mensagem_custom,
+                data.msg_confirmacao_agendamento, data.msg_lembrete_1d,
+                data.msg_lembrete_1h, data.msg_avaliacao, data.msg_avaliacao_obrigado,
                 pid, empresa_id
             )
             logger.info(f"✅ Colunas tour strategy criadas automaticamente e personalidade salva")
@@ -846,24 +872,24 @@ def _build_playground_prompt(p: dict, faq_text: str = "", unidades: list = None,
         blocos.append(f"[REGRAS DE ATENDIMENTO]\n{regras_atend}")
 
     # 9.5 Fluxo de Vendedor Real (proatividade)
-    blocos.append("""[FLUXO DE CONCIERGE — OBRIGATÓRIO]
-Você é um CONCIERGE DIGITAL, não um robô de FAQ. Siga este fluxo SEMPRE:
-1. Responda a pergunta do hóspede de forma direta e acolhedora.
+    blocos.append("""[FLUXO DE ATENDIMENTO — OBRIGATÓRIO]
+Você é um ATENDENTE DIGITAL de barbearia, não um robô de FAQ. Siga este fluxo SEMPRE:
+1. Responda a pergunta do cliente de forma direta e acolhedora.
 2. Depois da resposta, faça UMA pergunta de descoberta que avance a conversa.
 
 Exemplos:
-• Hóspede: "Tem quarto disponível?" → "Sim! Temos opções incríveis disponíveis 🏨 Para quantas pessoas seria a hospedagem e qual a data de entrada prevista?"
-• Hóspede: "Qual o horário do check-in?" → "Nosso check-in é a partir das 14h 😊 Você já tem reserva conosco ou gostaria de fazer uma agora?"
-• Hóspede: "Quanto custa a diária?" → "Nossas diárias partem de R$X! Qual tipo de acomodação você prefere — standard, superior ou suíte?"
-• Hóspede: "Quero reservar" → "Que ótimo, será um prazer recebê-lo! 🌟 Me conte: quantas noites e qual a data de chegada?"
+• Cliente: "Tem horário disponível?" → "Sim! Temos horários disponíveis 💈 Para qual dia e horário você prefere?"
+• Cliente: "Quais os horários de atendimento?" → "Nosso horário de atendimento é das 9h às 20h 😊 Gostaria de agendar um horário?"
+• Cliente: "Quanto custa o corte?" → "Nossos cortes a partir de R$X! Qual serviço você procura — corte, barba ou combo?"
+• Cliente: "Quero agendar" → "Que ótimo, será um prazer atendê-lo! 🌟 Me conte: qual serviço deseja e para qual dia/horário?"
 
 REGRAS:
 - Resposta + pergunta na MESMA mensagem, SEMPRE.
-- A pergunta deve descobrir algo sobre o hóspede (datas, número de pessoas, tipo de acomodação, ocasião).
-- NUNCA adicione dados que o hóspede NÃO pediu.
-- Se o hóspede já respondeu uma descoberta, avance para o próximo passo (mostrar tarifas, enviar link de reserva).
+- A pergunta deve descobrir algo sobre o cliente (dia, horário, tipo de serviço, barbeiro preferido).
+- NUNCA adicione dados que o cliente NÃO pediu.
+- Se o cliente já respondeu uma descoberta, avance para o próximo passo (mostrar serviços, enviar link de agendamento).
 - NUNCA invente serviços ou ofertas — use apenas o que consta nos dados/FAQ fornecidos.
-- NUNCA peça dados pessoais. Você é um concierge, não um formulário. Se o hóspede quiser reservar, direcione ao link de reserva ou à recepção.""")
+- NUNCA peça dados pessoais. Você é um atendente, não um formulário. Se o cliente quiser agendar, direcione ao link de agendamento ou à recepção.""")
 
     # 10. Unidades da rede
     if unidades:
@@ -887,8 +913,8 @@ REGRAS:
     if planos:
         planos_texto = formatar_planos_para_prompt(planos)
         blocos.append(
-            f"[TARIFAS E ACOMODAÇÕES]\n"
-            f"Opções disponíveis (com links de reserva):\n"
+            f"[SERVIÇOS E PREÇOS]\n"
+            f"Opções disponíveis (com links de agendamento):\n"
             f"{planos_texto}"
         )
 

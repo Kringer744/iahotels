@@ -295,7 +295,7 @@ export default function UnitsPage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full" />
-                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em]">Concierge IA</span>
+                <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em]">Barber IA</span>
               </div>
               <h1 className="text-4xl font-black tracking-tight">
                 <span style={{ background: "linear-gradient(135deg, #fff 0%, #D4AF37 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
@@ -505,7 +505,7 @@ export default function UnitsPage() {
                         <Field label="Nome Oficial *" icon={Info}>
                           <input required type="text" value={formData.nome}
                             onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                            className={inputClass} placeholder="Ex: Enotel Resort – Ponta Negra" />
+                            className={inputClass} placeholder="Ex: Barbearia Centro" />
                         </Field>
                         <Field label="Nome Curto / Exibição" icon={Layers}>
                           <input type="text" value={formData.nome_abreviado}
@@ -566,7 +566,7 @@ export default function UnitsPage() {
                             <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4AF37]/40" />
                             <input type="text" value={formData.instagram}
                               onChange={e => setFormData({ ...formData, instagram: e.target.value })}
-                              className={`${inputClass} pl-12`} placeholder="enotelresort" />
+                              className={`${inputClass} pl-12`} placeholder="barbearia-centro" />
                           </div>
                         </Field>
                         <Field label="Website (URL)" icon={Globe}>
@@ -595,7 +595,7 @@ export default function UnitsPage() {
                           <textarea rows={7} value={formData.horarios}
                             onChange={e => setFormData({ ...formData, horarios: e.target.value })}
                             className={textareaClass}
-                            placeholder={"Check-in: 14h\nCheck-out: 12h\nRecepção: 24h\nRestaurante: 07h às 22h"} />
+                            placeholder={"Seg-Sex: 08h-20h\nSáb: 08h-18h"} />
                         </Field>
                         <Field label="Serviços & Comodidades" icon={Dumbbell}>
                           <textarea id="modalidades-textarea" rows={7} value={formData.modalidades}
@@ -775,7 +775,7 @@ export default function UnitsPage() {
                                 </select>
                               </div>
                               <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Expedia / Hotels.com</label>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Parcerias</label>
                                 <select
                                   value={typeof formData.convenios === "object" ? (formData.convenios?.totalpass || "Não listado") : "Não listado"}
                                   onChange={e => {

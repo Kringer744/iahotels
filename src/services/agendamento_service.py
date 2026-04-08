@@ -383,10 +383,26 @@ async def media_avaliacoes_barbeiro(db_pool, barbeiro_id: int) -> Dict:
 #  FORMATAÇÃO PARA IA
 # ═══════════════════════════════════════════════════════════
 
-def formatar_agendamento_confirmacao(agendamento: Dict, barbeiro_nome: str, servico_nome: Optional[str] = None) -> str:
+def formatar_agendamento_confirmacao(
+    agendamento: Dict, barbeiro_nome: str, servico_nome: Optional[str] = None,
+    templates: Optional[Dict[str, str]] = None,
+) -> str:
     """Formata confirmação de agendamento para WhatsApp."""
     data_hora = agendamento['data_hora']
     dia_nome = DIAS_SEMANA_PT.get(data_hora.weekday(), "")
+
+    template = (templates or {}).get("msg_confirmacao_agendamento")
+    if template:
+        try:
+            return template.format(
+                dia=dia_nome.capitalize(),
+                data=data_hora.strftime('%d/%m/%Y'),
+                horario=data_hora.strftime('%H:%M'),
+                barbeiro=barbeiro_nome,
+                servico=servico_nome or "",
+            )
+        except (KeyError, IndexError, ValueError):
+            pass  # fall through to default
 
     texto = f"✅ *Agendamento Confirmado!*\n\n"
     texto += f"📅 {dia_nome.capitalize()}, {data_hora.strftime('%d/%m/%Y')}\n"
@@ -399,10 +415,27 @@ def formatar_agendamento_confirmacao(agendamento: Dict, barbeiro_nome: str, serv
     return texto
 
 
-def formatar_lembrete(agendamento: Dict, barbeiro_nome: str, tipo: str = "1d") -> str:
+def formatar_lembrete(
+    agendamento: Dict, barbeiro_nome: str, tipo: str = "1d",
+    templates: Optional[Dict[str, str]] = None,
+) -> str:
     """Formata mensagem de lembrete."""
     data_hora = agendamento['data_hora']
     dia_nome = DIAS_SEMANA_PT.get(data_hora.weekday(), "")
+
+    template_key = "msg_lembrete_1d" if tipo == "1d" else "msg_lembrete_1h"
+    template = (templates or {}).get(template_key)
+    if template:
+        try:
+            return template.format(
+                dia=dia_nome.capitalize(),
+                data=data_hora.strftime('%d/%m'),
+                horario=data_hora.strftime('%H:%M'),
+                barbeiro=barbeiro_nome,
+                servico="",
+            )
+        except (KeyError, IndexError, ValueError):
+            pass  # fall through to default
 
     if tipo == "1d":
         texto = f"👋 Oi! Lembrando que *amanhã* você tem horário marcado:\n\n"
@@ -416,8 +449,25 @@ def formatar_lembrete(agendamento: Dict, barbeiro_nome: str, tipo: str = "1d") -
     return texto
 
 
-def formatar_pedido_avaliacao(agendamento: Dict, barbeiro_nome: str) -> str:
+def formatar_pedido_avaliacao(
+    agendamento: Dict, barbeiro_nome: str,
+    templates: Optional[Dict[str, str]] = None,
+) -> str:
     """Formata pedido de avaliação pós-corte."""
+    template = (templates or {}).get("msg_avaliacao")
+    if template:
+        try:
+            return template.format(
+                barbeiro=barbeiro_nome,
+                dia="",
+                data="",
+                horario="",
+                servico="",
+                estrelas="",
+            )
+        except (KeyError, IndexError, ValueError):
+            pass  # fall through to default
+
     texto = f"✂️ Corte finalizado! Como foi seu atendimento com *{barbeiro_nome}*?\n\n"
     texto += "Dá uma nota de *1 a 5* ⭐\n\n"
     texto += "1 ⭐ - Ruim\n"
@@ -428,6 +478,22 @@ def formatar_pedido_avaliacao(agendamento: Dict, barbeiro_nome: str) -> str:
     texto += "Só mandar o número! 😊"
 
     return texto
+
+
+def formatar_avaliacao_obrigado(
+    nota: int,
+    templates: Optional[Dict[str, str]] = None,
+) -> str:
+    """Formata mensagem de agradecimento pós-avaliação."""
+    estrelas = "⭐" * nota
+    template = (templates or {}).get("msg_avaliacao_obrigado")
+    if template:
+        try:
+            return template.format(estrelas=estrelas, barbeiro="", dia="", data="", horario="", servico="")
+        except (KeyError, IndexError, ValueError):
+            pass  # fall through to default
+
+    return f"Obrigado pela avaliação! {estrelas}\n\nSua opinião é muito importante pra gente! 😊"
 
 
 # ═══════════════════════════════════════════════════════════

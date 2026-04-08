@@ -189,19 +189,19 @@ def responder_telefone(unidade: dict) -> str:
 
 
 def responder_modalidades(unidade: dict) -> str:
-    nome = unidade.get("nome") or "do hotel"
+    nome = unidade.get("nome") or "da barbearia"
     modalidades = normalizar_lista_campo(unidade.get("modalidades"))
     foto_grade = unidade.get("foto_grade")
 
     if not modalidades:
         return (
-            f"🏨 No *{nome}* oferecemos diversas comodidades e serviços!\n\n"
-            "Contamos com restaurante, piscina, spa, academia e muito mais. "
+            f"💈 Na *{nome}* oferecemos diversos serviços!\n\n"
+            "Contamos com corte, barba, sobrancelha, pigmentação e muito mais. "
             "O que você gostaria de saber? 😊"
         )
 
     lista = "\n".join([f"• {m}" for m in modalidades])
-    resposta = f"🏨 No *{nome}* você encontra:\n\n{lista}"
+    resposta = f"💈 Na *{nome}* você encontra:\n\n{lista}"
 
     if foto_grade:
         resposta += f"\n\n🖼️ *Também tenho uma imagem com todas as nossas comodidades!* Quer que eu te envie? 😊"
@@ -340,27 +340,26 @@ def montar_saudacao_humanizada(
     return "\n".join(partes)
 
 
-# 🏨 PALAVRAS-CHAVE DE TIPO DE CLIENTE — detecta hóspede atual ou parceiro corporativo
+# 💈 PALAVRAS-CHAVE DE TIPO DE CLIENTE — detecta cliente existente ou parceiro
 ALUNO_KEYWORDS = [
-    "ja sou hospede", "já sou hóspede", "sou hospede", "ja estou hospedado",
-    "tenho reserva", "minha reserva", "meu check-in", "meu checkout",
-    "cancelar reserva", "alterar reserva", "problema com reserva",
-    "sou cliente", "sou membro", "fidelidade", "programa de pontos",
+    "ja sou cliente", "já sou cliente", "sou cliente",
+    "meu agendamento", "meu horário", "meu horario", "minha agenda",
+    "cancelar agendamento", "alterar agendamento", "problema com agendamento",
+    "sou membro", "fidelidade", "programa de pontos",
     "atendimento ao cliente", "suporte", "reclamacao", "reclamação",
 ]
 
 GYMPASS_KEYWORDS = [
-    "booking", "airbnb", "expedia", "decolar", "hurb", "hotel urbano",
     "convenio", "convênio", "beneficio corporativo", "benefício corporativo",
     "pelo app", "pelo aplicativo", "app parceiro", "parceria empresa",
-    "plano empresarial", "beneficio da empresa", "tarifa corporativa",
+    "plano empresarial", "beneficio da empresa",
 ]
 
 
 def detectar_tipo_cliente(texto: str) -> Optional[str]:
     """
-    Detecta se o cliente já é hóspede com reserva (suporte/alteração)
-    ou reservou via OTA/parceiro (roteamento diferente).
+    Detecta se o cliente já tem agendamento (suporte/alteração)
+    ou veio via parceiro (roteamento diferente).
     Retorna: 'aluno' | 'gympass' | None
     """
     if not texto:
@@ -374,14 +373,14 @@ def detectar_tipo_cliente(texto: str) -> Optional[str]:
 
 # 🎯 MAPEAMENTO DE INTENÇÕES PARA CACHE SEMÂNTICO
 INTENCOES = {
-    "preco": ["preco", "preço", "valor", "quanto custa", "diaria", "diária", "tarifa", "tarifas", "planos", "promoção", "promocao", "valores", "custa"],
-    "horario": ["horario", "horário", "funcionamento", "abre", "fecha", "que horas", "aberto", "funciona", "check-in", "checkout", "check in", "check out"],
+    "preco": ["preco", "preço", "valor", "quanto custa", "servico", "serviço", "planos", "promoção", "promocao", "valores", "custa"],
+    "horario": ["horario", "horário", "funcionamento", "abre", "fecha", "que horas", "aberto", "funciona", "atendimento"],
     "endereco": ["endereco", "endereço", "local", "localização", "fica", "onde fica", "como chegar", "localizacao"],
     "telefone": ["telefone", "contato", "whatsapp", "numero", "número", "ligar", "falar", "telefone"],
-    "unidades": ["unidades", "outras unidades", "lista de unidades", "quantas unidades", "onde tem", "tem em", "unidade", "hotel"],
-    "modalidades": ["restaurante", "piscina", "spa", "academia", "cafe da manha", "café da manhã", "servicos", "serviços", "comodidades", "estrutura", "lazer", "atividades"],
-    "infraestrutura": ["estacionamento", "wifi", "wi-fi", "acessibilidade", "pet", "beliche", "cama", "quarto", "suite", "suíte"],
-    "matricula": ["reserva", "reservar", "reservação", "booking", "fazer reserva", "quero reservar", "disponibilidade"]
+    "unidades": ["unidades", "outras unidades", "lista de unidades", "quantas unidades", "onde tem", "tem em", "unidade", "barbearia"],
+    "modalidades": ["corte", "barba", "barbeiro", "navalha", "degradê", "degrade", "sobrancelha", "servicos", "serviços", "comodidades", "estrutura", "atividades"],
+    "infraestrutura": ["estacionamento", "wifi", "wi-fi", "acessibilidade", "ar condicionado"],
+    "agendamento": ["agendamento", "agendar", "marcar", "horário disponível", "horario disponivel", "quero agendar", "disponibilidade"]
 }
 
 # --- CONTROLE DE CONCORRÊNCIA ---

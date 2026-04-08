@@ -56,9 +56,9 @@ def classificar_intencao(texto: str) -> str:
         return "unidades"
     if re.search(r"(preco|preço|valor|mensalidade|quanto custa|plano|planos|promo|promocao|promoção)", t):
         return "planos"
-    if re.search(r"(restaurante|cafe da manha|café da manhã|piscina|spa|academia|sauna|lazer|servicos|serviços|comodidades|estrutura|atividades|suite|suíte|quarto|acomodacao|acomodação|cama|beliche)", t):
+    if re.search(r"(corte|barba|barbeiro|navalha|degradê|degrade|pigmentacao|pigmentação|sobrancelha|lazer|servicos|serviços|comodidades|estrutura|atividades)", t):
         return "modalidades"
-    if re.search(r"(booking|airbnb|expedia|decolar|convenio|convênio|tarifa corporativa|parceria|ota)", t):
+    if re.search(r"(convenio|convênio|parceria|beneficio corporativo)", t):
         return "convenio"
     return "llm"
 
@@ -69,11 +69,11 @@ def _faq_compativel_com_intencao(intencao: str, pergunta_faq: str) -> bool:
         return True
 
     mapa = {
-        "modalidades": {"restaurante", "piscina", "spa", "academia", "lazer", "servico", "serviços", "comodidade", "suite", "suíte", "quarto", "acomodacao"},
-        "horario": {"horario", "funcionamento", "abre", "fecha", "check-in", "checkout"},
+        "modalidades": {"corte", "barba", "barbeiro", "navalha", "degradê", "degrade", "servico", "serviços", "comodidade"},
+        "horario": {"horario", "funcionamento", "abre", "fecha", "atendimento"},
         "endereco": {"endereco", "endereço", "local", "unidade", "fica"},
         "telefone": {"telefone", "whatsapp", "contato", "numero", "número"},
-        "planos": {"plano", "planos", "valor", "preco", "preço", "diaria", "tarifa", "reserva", "beneficio", "benefício"},
+        "planos": {"plano", "planos", "valor", "preco", "preço", "servico", "serviço", "agendamento", "beneficio", "benefício"},
         "convenio": {"convenio", "convênio", "booking", "airbnb", "expedia", "parceria"},
     }
     chaves = mapa.get(intencao)

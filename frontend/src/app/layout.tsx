@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Concierge IA - Dashboard",
-  description: "Plataforma de atendimento inteligente para hotéis",
+  title: "Barber IA - Dashboard",
+  description: "Plataforma de agendamento inteligente para barbearias",
 };
 
 export default function RootLayout({

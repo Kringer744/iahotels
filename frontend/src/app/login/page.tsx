@@ -60,8 +60,8 @@ export default function LoginPage() {
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary opacity-10 rounded-full blur-3xl animate-pulse"></div>
           
           <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-gradient mb-2 tracking-tight">Concierge IA</h1>
-            <p className="text-gray-400 text-sm">Atendimento Inteligente para Hotéis</p>
+            <h1 className="text-4xl font-bold text-gradient mb-2 tracking-tight">Barber IA</h1>
+            <p className="text-gray-400 text-sm">Agendamento Inteligente para Barbearias</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
@@ -123,7 +123,7 @@ export default function LoginPage() {
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center px-4">
             <p className="text-gray-500 text-xs leading-relaxed">
-              Bem-vindo à sua plataforma de atendimento hoteleiro inteligente.
+              Bem-vindo à sua plataforma de agendamento inteligente.
             </p>
           </div>
         </div>

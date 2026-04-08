@@ -5,7 +5,7 @@ import axios from "axios";
 import {
   TrendingUp, Users, MessageSquare, Clock, Target, ArrowUpRight,
   ChevronRight, LayoutDashboard, Settings, LogOut, Bell,
-  Building2, Brain, HelpCircle, Network, Hotel, ChevronDown,
+  Building2, Brain, HelpCircle, Network, Scissors, ChevronDown,
   Activity, Star, ArrowRight, Sparkles, MessageSquare as MsgIcon,
   BarChart3
 } from "lucide-react";
@@ -92,7 +92,7 @@ export default function DashboardPage() {
             <div className="absolute inset-0 rounded-full border-2 border-t-primary animate-spin" />
             <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-primary" />
           </div>
-          <p className="text-sm text-gray-500 font-medium tracking-widest uppercase">Concierge IA</p>
+          <p className="text-sm text-gray-500 font-medium tracking-widest uppercase">Barber IA</p>
         </div>
       </div>
     );
@@ -107,7 +107,7 @@ export default function DashboardPage() {
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Nenhuma unidade ativa</h2>
           <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-            Configure sua primeira unidade no Concierge IA para começar.
+            Configure sua primeira unidade no Barber IA para começar.
           </p>
           <a href="/dashboard/units"
             className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold py-3 px-6 rounded-xl transition-all">
@@ -141,13 +141,13 @@ export default function DashboardPage() {
         <div className="px-6 py-8 border-b border-white/5">
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.location.href = "/dashboard"}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-              <Hotel className="w-5 h-5 text-black font-black" />
+              <Scissors className="w-5 h-5 text-black font-black" />
             </div>
             <div>
               <p className="font-black text-lg leading-tight tracking-tighter">
-                Concierge <span className="font-light text-primary/80">IA</span>
+                Barber <span className="font-light text-primary/80">IA</span>
               </p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Hotel Intelligence</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Smart Scheduling</p>
             </div>
           </div>
         </div>

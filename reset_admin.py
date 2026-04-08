@@ -1,5 +1,5 @@
 """
-Script para recriar o usuário admin da Enotel com senha correta (bcrypt).
+Script para recriar o usuário admin da Barbearia com senha correta (bcrypt).
 Execute no terminal do container bot:
   python3 reset_admin.py
 """
@@ -12,9 +12,9 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-EMAIL = "admin@enotel.com"
-SENHA = "enotel2026"
-NOME  = "Admin Enotel"
+EMAIL = "admin@barber.com"
+SENHA = "barber2026"
+NOME  = "Admin Barber"
 PERFIL = "admin_master"
 EMPRESA_ID = 1
 
@@ -44,11 +44,11 @@ async def main():
         await conn.execute(
             """
             INSERT INTO empresas (uuid, nome, nome_fantasia, plano, status, created_at)
-            VALUES ($1, 'Enotel', 'Enotel Resort', 'pro', 'active', NOW())
+            VALUES ($1, 'Barbearia Demo', 'Barbearia Demo', 'pro', 'active', NOW())
             """,
             str(uuid.uuid4()),
         )
-        print("✅ Empresa Enotel criada (id=1)")
+        print("✅ Empresa Barbearia Demo criada (id=1)")
     else:
         print(f"✅ Empresa encontrada: {empresa['nome']}")
 

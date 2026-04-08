@@ -20,6 +20,7 @@ const navItemsRaw = [
   { label: "Personalidade IA", icon: Brain, href: "/dashboard/personality", id: "personality" },
   { label: "Serviços", icon: Scissors, href: "/dashboard/servicos", id: "servicos" },
   { label: "Avaliações", icon: Star, href: "/dashboard/avaliacoes", id: "avaliacoes" },
+  { label: "Mensagens", icon: MessageSquare, href: "/dashboard/mensagens", id: "mensagens" },
   { label: "Integrações", icon: Network, href: "/dashboard/integrations", id: "integrations" },
 ];
 
