@@ -4011,6 +4011,19 @@ async def processar_ia_e_responder(
    ⚠️ A tag NÃO aparece para o cliente, é processada internamente.
 
 6. Para CANCELAR: use <CANCELAR_AGENDAMENTO:id_do_agendamento>
+
+7. 🧑 PERSONA DO CLIENTE — Se durante a conversa você perceber algo relevante sobre o perfil/personalidade do cliente
+   (ex: é comunicativo, objetivo, exigente, tranquilo, tímido, engraçado, tem preferência por algo específico),
+   inclua a tag NO FINAL da sua resposta:
+   <PERSONA:tipo|observação>
+   Tipos válidos: persona, preferencia, historico
+   Exemplos:
+   <PERSONA:persona|Cliente descontraído e comunicativo, gosta de puxar assunto>
+   <PERSONA:persona|Cliente objetivo e direto, prefere atendimento rápido>
+   <PERSONA:preferencia|Prefere corte degradê com navalha>
+   <PERSONA:preferencia|Sempre pede para não tirar muito do topo>
+   <PERSONA:historico|Cliente fiel, vem toda semana>
+   ⚠️ Só use essa tag quando identificar algo RELEVANTE. Não force. A tag NÃO aparece para o cliente.
 """
                 contexto_precarregado += _contexto_disp
                 logger.info(f"💈 Contexto de disponibilidade injetado para conv {conversation_id} | disp={_disp[:100]}")
@@ -4039,6 +4052,30 @@ async def processar_ia_e_responder(
                 await redis_client.delete(f"upsell_pendente:{conversation_id}")
             except Exception as _up_ctx_err:
                 logger.warning(f"⚠️ [UPSELL] Erro ao injetar contexto: {_up_ctx_err}")
+
+        # ── MEMÓRIA / PERSONA DO CLIENTE ──
+        try:
+            _fone_mem = await redis_client.get(f"fone_cliente:{conversation_id}")
+            if _fone_mem and db_pool:
+                _fone_mem_limpo = "".join(filter(str.isdigit, str(_fone_mem)))
+                if _fone_mem_limpo:
+                    _memorias_rows = await db_pool.fetch(
+                        """SELECT tipo, conteudo FROM memoria_cliente
+                           WHERE contato_fone = $1 AND empresa_id = $2
+                           ORDER BY relevancia DESC, updated_at DESC
+                           LIMIT 10""",
+                        _fone_mem_limpo, empresa_id
+                    )
+                    if _memorias_rows:
+                        _emoji_map = {"preferencia": "⭐", "objetivo": "🎯", "restricao": "⚠️", "historico": "📋", "persona": "🧑"}
+                        _mem_linhas = []
+                        for _mr in _memorias_rows:
+                            _em = _emoji_map.get(_mr["tipo"], "📌")
+                            _mem_linhas.append(f"{_em} [{_mr['tipo'].upper()}] {_mr['conteudo']}")
+                        contexto_precarregado += "\n\n[MEMÓRIA DO CLIENTE — informações de conversas anteriores]\n" + "\n".join(_mem_linhas)
+                        logger.info(f"🧠 Memória do cliente injetada para conv {conversation_id}: {len(_memorias_rows)} registros")
+        except Exception as _mem_err:
+            logger.warning(f"⚠️ Erro ao carregar memória do cliente: {_mem_err}")
 
         # ── Detecção de AVALIAÇÃO (resposta numérica 1-5 após corte) ──
         if db_pool and primeira_mensagem and re.match(r'^[1-5]$', (primeira_mensagem or "").strip()):
@@ -4875,11 +4912,30 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                         _serv_nome_notif = _serv['nome'] if _serv else 'Corte'
                                         _cliente_nome_notif = nome_cliente or 'Cliente'
 
+                                        # Buscar persona do cliente para o barbeiro
+                                        _persona_bloco = ""
+                                        try:
+                                            _fone_persona_notif = await redis_client.get(f"fone_cliente:{conversation_id}")
+                                            if _fone_persona_notif:
+                                                _fp_limpo = "".join(filter(str.isdigit, str(_fone_persona_notif)))
+                                                _persona_rows = await db_pool.fetch(
+                                                    """SELECT tipo, conteudo FROM memoria_cliente
+                                                       WHERE contato_fone = $1 AND empresa_id = $2
+                                                       ORDER BY relevancia DESC, updated_at DESC LIMIT 5""",
+                                                    _fp_limpo, empresa_id
+                                                )
+                                                if _persona_rows:
+                                                    _persona_items = [f"• {r['conteudo']}" for r in _persona_rows]
+                                                    _persona_bloco = "\n\n🧑 *Sobre o cliente:*\n" + "\n".join(_persona_items)
+                                        except Exception:
+                                            pass
+
                                         _msg_barb = (
                                             f"📅 *Novo Agendamento!*\n\n"
                                             f"👤 Cliente: {_cliente_nome_notif}\n"
                                             f"📆 {_dia_nome}, {_data_fmt} às {_horario_fmt}\n"
-                                            f"✂️ {_serv_nome_notif}\n\n"
+                                            f"✂️ {_serv_nome_notif}"
+                                            f"{_persona_bloco}\n\n"
                                             f"Prepare-se! 💈"
                                         )
 
@@ -5022,7 +5078,21 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     if _fb_integ:
                                         from src.services.agendamento_service import DIAS_SEMANA_PT
                                         _fb_dia_nome = DIAS_SEMANA_PT.get(_fb_data_hora.weekday(), "")
-                                        _fb_msg = f"📅 *Novo Agendamento!*\n\n👤 Cliente: {nome_cliente}\n📆 {_fb_dia_nome.capitalize()}, {_fb_data_hora.strftime('%d/%m')} às {_fb_data_hora.strftime('%H:%M')}\n✂️ {_fallback_serv['nome'] if _fallback_serv else 'Corte'}\n\nPrepare-se! 💈"
+                                        # Buscar persona do cliente
+                                        _fb_persona = ""
+                                        try:
+                                            if _fone_fb_limpo:
+                                                _fb_pr = await db_pool.fetch(
+                                                    """SELECT conteudo FROM memoria_cliente
+                                                       WHERE contato_fone = $1 AND empresa_id = $2
+                                                       ORDER BY relevancia DESC LIMIT 5""",
+                                                    _fone_fb_limpo, empresa_id
+                                                )
+                                                if _fb_pr:
+                                                    _fb_persona = "\n\n🧑 *Sobre o cliente:*\n" + "\n".join(f"• {r['conteudo']}" for r in _fb_pr)
+                                        except Exception:
+                                            pass
+                                        _fb_msg = f"📅 *Novo Agendamento!*\n\n👤 Cliente: {nome_cliente}\n📆 {_fb_dia_nome.capitalize()}, {_fb_data_hora.strftime('%d/%m')} às {_fb_data_hora.strftime('%H:%M')}\n✂️ {_fallback_serv['nome'] if _fallback_serv else 'Corte'}{_fb_persona}\n\nPrepare-se! 💈"
                                         _fb_fone_limpo = "".join(filter(str.isdigit, _fb_barb_fone))
                                         if not _fb_fone_limpo.startswith("55"):
                                             _fb_fone_limpo = "55" + _fb_fone_limpo
@@ -5075,6 +5145,43 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 logger.info(f"❌ Agendamento #{_ag_id} cancelado via IA para conv {conversation_id}")
             except Exception as e:
                 logger.error(f"Erro ao cancelar agendamento via IA: {e}")
+
+        # --- Handler de PERSONA DO CLIENTE via tag <PERSONA:tipo|conteudo> ---
+        _persona_matches = re.findall(r'<PERSONA:\s*([^|]+)\|([^>]+)>', resposta_texto or '')
+        if _persona_matches and db_pool:
+            resposta_texto = re.sub(r'<PERSONA:[^>]*>', '', resposta_texto).strip()
+            _fone_persona = await redis_client.get(f"fone_cliente:{conversation_id}")
+            if _fone_persona:
+                _fone_persona_limpo = "".join(filter(str.isdigit, str(_fone_persona)))
+                for _ptipo, _pconteudo in _persona_matches:
+                    _ptipo = _ptipo.strip().lower()
+                    _pconteudo = _pconteudo.strip()
+                    if _ptipo not in ("persona", "preferencia", "historico"):
+                        _ptipo = "persona"
+                    try:
+                        # Verifica duplicata
+                        _existing_mem = await db_pool.fetchval(
+                            """SELECT id FROM memoria_cliente
+                               WHERE contato_fone = $1 AND empresa_id = $2 AND tipo = $3 AND conteudo = $4
+                               LIMIT 1""",
+                            _fone_persona_limpo, empresa_id, _ptipo, _pconteudo
+                        )
+                        if _existing_mem:
+                            await db_pool.execute(
+                                "UPDATE memoria_cliente SET relevancia = relevancia + 0.1, updated_at = NOW() WHERE id = $1",
+                                _existing_mem
+                            )
+                        else:
+                            await db_pool.execute(
+                                """INSERT INTO memoria_cliente (empresa_id, contato_fone, tipo, conteudo, relevancia)
+                                   VALUES ($1, $2, $3, $4, $5)""",
+                                empresa_id, _fone_persona_limpo, _ptipo, _pconteudo, 1.0
+                            )
+                        # Invalida cache
+                        await redis_client.delete(f"{empresa_id}:memoria_lp:{_fone_persona_limpo}")
+                        logger.info(f"🧑 [PERSONA] Salvo [{_ptipo}]: {_pconteudo[:60]} (conv={conversation_id})")
+                    except Exception as _pe:
+                        logger.warning(f"⚠️ [PERSONA] Erro ao salvar: {_pe}")
 
         # --- Salvar estado ---
         async with redis_client.pipeline(transaction=True) as pipe:
