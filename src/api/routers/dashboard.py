@@ -532,10 +532,15 @@ async def criar_unidade(
             str(_uuid.uuid4()), empresa_id, slug, body.nome, body.nome_abreviado,
             body.cidade, body.bairro, body.estado, body.endereco, body.numero,
             body.telefone_principal, body.whatsapp, body.site, body.instagram,
-            body.link_matricula, json.dumps(body.horarios) if body.horarios else None, json.dumps(body.modalidades) if body.modalidades else None,
-            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
-            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
-            json.dumps(body.servicos or {}), body.palavras_chave or [],
+            body.link_matricula,
+            json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
+            json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
+            json.dumps(body.planos) if body.planos else '{}',
+            json.dumps(body.formas_pagamento) if body.formas_pagamento else '{}',
+            json.dumps(body.convenios) if body.convenios else '{}',
+            json.dumps(body.infraestrutura) if body.infraestrutura else '{}',
+            json.dumps(body.servicos) if body.servicos else '{}',
+            body.palavras_chave or [],
             body.foto_grade or None, body.link_tour_virtual or None
         )
         from src.core.redis_client import redis_client
@@ -748,10 +753,14 @@ async def atualizar_unidade(
             body.nome, body.nome_abreviado, body.cidade, body.bairro,
             body.estado, body.endereco, body.numero, body.telefone_principal,
             body.whatsapp, body.site, body.instagram, body.link_matricula,
-            json.dumps(body.horarios) if body.horarios else None, json.dumps(body.modalidades) if body.modalidades else None,
-            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
-            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
-            json.dumps(body.servicos or {}), body.palavras_chave or [],
+            json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
+            json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
+            json.dumps(body.planos) if body.planos else '{}',
+            json.dumps(body.formas_pagamento) if body.formas_pagamento else '{}',
+            json.dumps(body.convenios) if body.convenios else '{}',
+            json.dumps(body.infraestrutura) if body.infraestrutura else '{}',
+            json.dumps(body.servicos) if body.servicos else '{}',
+            body.palavras_chave or [],
             body.foto_grade or None, body.link_tour_virtual or None,
             unidade_id, empresa_id
         )
