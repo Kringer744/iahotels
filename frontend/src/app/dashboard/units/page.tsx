@@ -180,9 +180,10 @@ export default function UnitsPage() {
       }
       setSuccess(true);
       setTimeout(() => { setSuccess(false); setIsModalOpen(false); fetchUnits(); }, 1500);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Erro ao salvar:", e);
-      alert("Erro ao salvar alterações.");
+      const detail = e?.response?.data?.detail || "Erro desconhecido";
+      alert(`Erro ao salvar: ${detail}`);
     } finally {
       setSaving(false);
     }
