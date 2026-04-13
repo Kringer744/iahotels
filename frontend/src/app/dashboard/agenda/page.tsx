@@ -115,20 +115,21 @@ export default function AgendaPage() {
   const [newHorario, setNewHorario] = useState({ dia_semana: 0, hora_inicio: "08:00", hora_fim: "18:00" });
   const [savingHorario, setSavingHorario] = useState(false);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const getConfig = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
 
   /* ─── Data fetching ─── */
   const fetchBarbeiros = useCallback(async () => {
     try {
-      const { data } = await axios.get("/api-backend/agendamento/barbeiros", config);
+      const { data } = await axios.get("/api-backend/agendamento/barbeiros", getConfig());
       setBarbeiros(Array.isArray(data) ? data : data.barbeiros || []);
     } catch { setBarbeiros([]); }
   }, []);
 
   const fetchServicos = useCallback(async () => {
     try {
-      const { data } = await axios.get("/api-backend/agendamento/servicos", config);
+      const { data } = await axios.get("/api-backend/agendamento/servicos", getConfig());
       setServicos(Array.isArray(data) ? data : data.servicos || []);
     } catch { setServicos([]); }
   }, []);
@@ -150,7 +151,7 @@ export default function AgendaPage() {
   const fetchHorarios = useCallback(async (bId: number) => {
     setLoadingHorarios(true);
     try {
-      const { data } = await axios.get(`/api-backend/agendamento/horarios/${bId}`, config);
+      const { data } = await axios.get(`/api-backend/agendamento/horarios/${bId}`, getConfig());
       setHorarios(Array.isArray(data) ? data : data.horarios || []);
     } catch {
       setHorarios([]);
@@ -169,7 +170,7 @@ export default function AgendaPage() {
   /* ─── Actions ─── */
   const handleConcluir = async (id: number) => {
     try {
-      await axios.patch(`/api-backend/agendamento/agendamentos/${id}/concluir`, {}, config);
+      await axios.patch(`/api-backend/agendamento/agendamentos/${id}/concluir`, {}, getConfig());
       fetchAgendamentos();
     } catch {}
   };
@@ -177,7 +178,7 @@ export default function AgendaPage() {
   const handleCancelar = async (id: number) => {
     if (!confirm("Tem certeza que deseja cancelar este agendamento?")) return;
     try {
-      await axios.patch(`/api-backend/agendamento/agendamentos/${id}/cancelar`, {}, config);
+      await axios.patch(`/api-backend/agendamento/agendamentos/${id}/cancelar`, {}, getConfig());
       fetchAgendamentos();
     } catch {}
   };
@@ -192,7 +193,7 @@ export default function AgendaPage() {
         data_hora: modalData.data_hora,
         cliente_nome: modalData.cliente_nome,
         cliente_telefone: modalData.cliente_telefone,
-      }, config);
+      }, getConfig());
       setShowModal(false);
       setModalData({ barbeiro_id: "", servico_id: "", data_hora: "", cliente_nome: "", cliente_telefone: "" });
       fetchAgendamentos();
@@ -210,7 +211,7 @@ export default function AgendaPage() {
         dia_semana: newHorario.dia_semana,
         hora_inicio: newHorario.hora_inicio,
         hora_fim: newHorario.hora_fim,
-      }, config);
+      }, getConfig());
       fetchHorarios(horarioBarbeiro as number);
     } catch {} finally {
       setSavingHorario(false);
@@ -219,7 +220,7 @@ export default function AgendaPage() {
 
   const handleDeleteHorario = async (id: number) => {
     try {
-      await axios.delete(`/api-backend/agendamento/horarios/${id}`, config);
+      await axios.delete(`/api-backend/agendamento/horarios/${id}`, getConfig());
       if (horarioBarbeiro !== "") fetchHorarios(horarioBarbeiro as number);
     } catch {}
   };

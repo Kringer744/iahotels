@@ -75,8 +75,9 @@ export default function ConversasPage() {
   const [eventos, setEventos] = useState<EventoFunil[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(false);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const getConfig = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
 
   const fetchConversations = useCallback(async () => {
     setLoading(true);
@@ -87,7 +88,7 @@ export default function ConversasPage() {
       if (filterUnidade) params.append("unidade_id", filterUnidade.toString());
       if (filterStatus) params.append("status", filterStatus);
       if (busca) params.append("busca", busca);
-      const res = await axios.get(`/api-backend/dashboard/conversations?${params}`, config);
+      const res = await axios.get(`/api-backend/dashboard/conversations?${params}`, getConfig());
       setConversations(res.data.data || []);
       setTotal(res.data.total || 0);
     } catch (err) { console.error(err); }
@@ -95,7 +96,7 @@ export default function ConversasPage() {
   }, [offset, filterUnidade, filterStatus, busca]);
 
   useEffect(() => {
-    axios.get("/api-backend/dashboard/unidades", config).then(r => setUnidades(r.data)).catch(() => {});
+    axios.get("/api-backend/dashboard/unidades", getConfig()).then(r => setUnidades(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
@@ -103,7 +104,7 @@ export default function ConversasPage() {
   useEffect(() => {
     if (!selected) { setEventos([]); return; }
     setLoadingEventos(true);
-    axios.get(`/api-backend/dashboard/conversations/${selected.conversation_id}/eventos`, config)
+    axios.get(`/api-backend/dashboard/conversations/${selected.conversation_id}/eventos`, getConfig())
       .then(r => setEventos(r.data || []))
       .catch(() => setEventos([]))
       .finally(() => setLoadingEventos(false));
@@ -118,7 +119,7 @@ export default function ConversasPage() {
       const params = new URLSearchParams();
       if (filterUnidade) params.append("unidade_id", filterUnidade.toString());
       if (filterStatus) params.append("status", filterStatus);
-      const res = await axios.get(`/api-backend/management/export-leads?${params}`, config);
+      const res = await axios.get(`/api-backend/management/export-leads?${params}`, getConfig());
       const allLeads = res.data || [];
       const headers = ["Nome", "Telefone", "Score", "Qualificado", "Intencao", "Status", "Unidade", "Msgs Cliente", "IA", "Data"];
       const rows = allLeads.map((c: any) => [
@@ -141,7 +142,7 @@ export default function ConversasPage() {
     if (!selected) return;
     setSummarizing(true);
     try {
-      const res = await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/resumo`, {}, config);
+      const res = await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/resumo`, {}, getConfig());
       if (res.data.status === "success") {
         const newSummary = res.data.resumo_ia;
         setSelected({ ...selected, resumo_ia: newSummary });
@@ -326,7 +327,7 @@ export default function ConversasPage() {
                       <button 
                         onClick={async () => {
                           try {
-                            const res = await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/toggle-ia`, {}, config);
+                            const res = await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/toggle-ia`, {}, getConfig());
                             const newStatus = res.data.pausada;
                             setSelected({ ...selected, pausada: newStatus });
                             setConversations(conversations.map(c => c.conversation_id === selected.conversation_id ? { ...c, pausada: newStatus } : c));
@@ -349,7 +350,7 @@ export default function ConversasPage() {
                           if (!confirm("Limpar toda a memória da IA nessa conversa? A IA vai esquecer o histórico.")) return;
                           setClearingMemory(true);
                           try {
-                            await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/limpar-memoria`, {}, config);
+                            await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/limpar-memoria`, {}, getConfig());
                             setSelected({ ...selected, total_mensagens_cliente: 0, total_mensagens_ia: 0 });
                             setConversations(conversations.map(c => c.conversation_id === selected.conversation_id ? { ...c, total_mensagens_cliente: 0, total_mensagens_ia: 0 } : c));
                             setMemoryClearedId(String(selected.conversation_id));

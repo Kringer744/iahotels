@@ -53,14 +53,15 @@ export default function ServicosPage() {
   // Confirm deactivation
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const getConfig = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
 
   // ─── Fetch ────────────────────────────────────────────────────
   const fetchServicos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api-backend/agendamento/servicos", config);
+      const res = await axios.get("/api-backend/agendamento/servicos", getConfig());
       setServicos(res.data || []);
     } catch (err) {
       console.error(err);
@@ -119,9 +120,9 @@ export default function ServicosPage() {
     setError("");
     try {
       if (editingId) {
-        await axios.put(`/api-backend/agendamento/servicos/${editingId}`, form, config);
+        await axios.put(`/api-backend/agendamento/servicos/${editingId}`, form, getConfig());
       } else {
-        await axios.post("/api-backend/agendamento/servicos", form, config);
+        await axios.post("/api-backend/agendamento/servicos", form, getConfig());
       }
       setModalOpen(false);
       fetchServicos();
@@ -135,7 +136,7 @@ export default function ServicosPage() {
   // ─── Deactivate ───────────────────────────────────────────────
   const handleDeactivate = async (id: number) => {
     try {
-      await axios.delete(`/api-backend/agendamento/servicos/${id}`, config);
+      await axios.delete(`/api-backend/agendamento/servicos/${id}`, getConfig());
       setConfirmId(null);
       fetchServicos();
     } catch (err: any) {
