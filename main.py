@@ -1917,7 +1917,7 @@ async def buscar_planos_ativos(empresa_id: int, unidade_id: int = None, force_sy
         rows = await db_pool.fetch(query, *params)
         planos = [dict(r) for r in rows]
 
-        await redis_set_json(cache_key, planos, 60)
+    await redis_set_json(cache_key, planos, 60)
     return planos
 
 
@@ -2359,7 +2359,6 @@ async def enviar_mensagem_chatwoot(
         return resp
     except Exception as e:
         logger.error(f"❌ Erro final ao enviar mensagem: {e}")
-        return None
         if _PROMETHEUS_OK:
             METRIC_ERROS_TOTAL.labels(tipo="chatwoot_unknown").inc()
         return None
@@ -2428,7 +2427,22 @@ async def worker_followup():
                     FOR UPDATE OF f SKIP LOCKED
                 """, agora)
 
+                # Cache de empresas que têm templates ativos (evita query repetida por followup)
+                _empresas_com_templates: dict[int, bool] = {}
+
                 for f in pendentes:
+                    # Verifica se a empresa ainda possui templates de followup ativos
+                    _eid = f['empresa_id']
+                    if _eid not in _empresas_com_templates:
+                        _tem = await db_pool.fetchval(
+                            "SELECT 1 FROM templates_followup WHERE empresa_id = $1 AND ativo = true LIMIT 1",
+                            _eid
+                        )
+                        _empresas_com_templates[_eid] = bool(_tem)
+                    if not _empresas_com_templates[_eid]:
+                        await db_pool.execute("UPDATE followups SET status = 'cancelado' WHERE id = $1", f['id'])
+                        continue
+
                     if (
                         await redis_client.get(f"atend_manual:{f['empresa_id']}:{f['conversation_id']}") == "1"
                         or await redis_client.get(f"pause_ia:{f['empresa_id']}:{f['conversation_id']}") == "1"
@@ -3686,41 +3700,6 @@ async def processar_ia_e_responder(
 
         # --- FIM Fluxo Visual ---
 
-        # --- NOVIDADE: Fluxo Visual de Triagem (n8n-style) ---
-        # Se houver um fluxo ativo para a empresa, ele assume o controle ANTES da IA.
-        _fluxo_config = await carregar_fluxo_triagem(empresa_id)
-        if _fluxo_config and _fluxo_config.get("ativo"):
-            # Recupera o telefone do Redis (armazenado pelo webhook)
-            _fone_redis = await redis_client.get(f"fone_cliente:{conversation_id}")
-            if _fone_redis:
-                # Verifica se a IA está pausada para esta conversa
-                _ia_pausada = bool(await redis_client.exists(f"pause_ia:{empresa_id}:{conversation_id}"))
-                _phone_paused = bool(await redis_client.exists(f"pause_ia_phone:{empresa_id}:{_fone_redis}"))
-                
-                if not _ia_pausada and not _phone_paused:
-                    # Carrega integração para envio
-                    _integr_uaz = await carregar_integracao(empresa_id, 'uazapi')
-                    if _integr_uaz:
-                        _uaz_fluxo_cli = UazAPIClient(
-                            base_url=_integr_uaz.get("url", ""),
-                            token=_integr_uaz.get("token", ""),
-                            instance_name=_integr_uaz.get("instance", "default")
-                        )
-                        # Pega a última mensagem do buffer para o fluxo
-                        _mensagens_pool = await coletar_mensagens_buffer(conversation_id)
-                        if _mensagens_pool:
-                            _ultima_msg = _mensagens_pool[-1]
-                            _tratou = await executar_fluxo(empresa_id, _fone_redis, _ultima_msg, _fluxo_config, _uaz_fluxo_cli)
-                            if _tratou:
-                                logger.info(f"✅ [FluxoTriagem Monolith] Mensagem tratada pelo fluxo visual para {_fone_redis}")
-                                # Se tratou, libera o lock e encerra para evitar que a IA responda
-                                try:
-                                    await redis_client.eval(LUA_RELEASE_LOCK, 1, chave_lock, lock_val)
-                                except Exception: pass
-                                return True
-
-        # --- FIM Fluxo Visual ---
-
         mensagens_acumuladas = await coletar_mensagens_buffer(conversation_id)
         if not mensagens_acumuladas:
             return
@@ -4597,7 +4576,19 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
             "pode me responder por áudio", "pode me responder por audio",
             "responde por áudio", "responde por audio"]
         _keywords_audio_off = ["manda texto", "manda por texto", "prefiro texto",
-            "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto"]
+            "por texto", "em texto", "quero texto", "volta pro texto", "pode ser texto",
+            "não consigo ouvir", "nao consigo ouvir", "n consigo ouvir",
+            "pode digitar", "digitar pra mim", "digite pra mim", "digita pra mim",
+            "escreve pra mim", "escrever pra mim", "por escrito",
+            "manda mensagem", "manda por mensagem", "responde por texto",
+            "responder por texto", "pode escrever", "escreve por favor",
+            "para de mandar audio", "para de mandar áudio",
+            "não manda audio", "não manda áudio", "nao manda audio", "nao manda áudio",
+            "sem audio", "sem áudio", "para com audio", "para com áudio",
+            "pode ser por texto", "responde por escrito", "responder por escrito",
+            "volta pra texto", "volta para texto", "volta ao texto",
+            "só texto", "so texto", "apenas texto",
+            "não quero audio", "não quero áudio", "nao quero audio", "nao quero áudio"]
 
         # Checa se pediu pra ativar/desativar áudio nesta mensagem
         _todas_msgs = " ".join(textos + (transcricoes or [])).lower()
@@ -5236,7 +5227,7 @@ async def chatwoot_webhook(
                         f"\n\nComo posso te ajudar? 😊"
                     )
                     await enviar_mensagem_chatwoot(
-                        account_id, id_conv, _msg_confirmacao, _nome_ia_temp, integracao
+                        account_id, id_conv, _msg_confirmacao, _nome_ia_temp, integracao, empresa_id
                     )
 
                     lock_key = f"agendar_lock:{id_conv}"

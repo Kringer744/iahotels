@@ -323,6 +323,21 @@ async def limpar_memoria_conversa(
     if not ok:
         raise HTTPException(status_code=404, detail="Conversa não encontrada ou sem permissão")
 
+    # Limpa memória de longo prazo (memoria_cliente) do contato associado à conversa
+    try:
+        contato_fone = await _database.db_pool.fetchval(
+            "SELECT contato_fone FROM conversas WHERE conversation_id = $1 AND empresa_id = $2",
+            conversation_id, empresa_id
+        )
+        if contato_fone:
+            await _database.db_pool.execute(
+                "DELETE FROM memoria_cliente WHERE contato_fone = $1 AND empresa_id = $2",
+                contato_fone, empresa_id
+            )
+            await redis_client.delete(f"{empresa_id}:memoria_lp:{contato_fone}")
+    except Exception as e:
+        logger.warning(f"Aviso ao limpar memoria_cliente da conversa {conversation_id}: {e}")
+
     # Deleta todas as chaves Redis da conversa (formato padronizado: {empresa_id}:{chave}:{conversation_id})
     await redis_client.delete(
         f"{empresa_id}:estado:{conversation_id}",
@@ -532,7 +547,9 @@ async def criar_unidade(
             str(_uuid.uuid4()), empresa_id, slug, body.nome, body.nome_abreviado,
             body.cidade, body.bairro, body.estado, body.endereco, body.numero,
             body.telefone_principal, body.whatsapp, body.site, body.instagram,
-            body.link_matricula, body.horarios or None, body.modalidades or None,
+            body.link_matricula,
+            json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
+            json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
             json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
             json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
             json.dumps(body.servicos or {}), body.palavras_chave or [],
@@ -543,8 +560,8 @@ async def criar_unidade(
         logger.info(f"✅ Unidade '{body.nome}' criada (id={row['id']}, empresa_id={empresa_id})")
         return {"id": row["id"], "slug": slug, "nome": body.nome, "empresa_id": empresa_id}
     except Exception as e:
-        logger.error(f"Erro ao criar unidade: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao criar unidade")
+        logger.error(f"Erro ao criar unidade: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao criar unidade: {str(e)}")
 
 @router.post("/unidades/upload")
 async def upload_unidade_foto(
@@ -748,7 +765,8 @@ async def atualizar_unidade(
             body.nome, body.nome_abreviado, body.cidade, body.bairro,
             body.estado, body.endereco, body.numero, body.telefone_principal,
             body.whatsapp, body.site, body.instagram, body.link_matricula,
-            body.horarios or None, body.modalidades or None,
+            json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
+            json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
             json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
             json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
             json.dumps(body.servicos or {}), body.palavras_chave or [],
