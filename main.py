@@ -3510,6 +3510,10 @@ async def worker_lembretes_agendamento():
                             _fone = "55" + _fone
 
                         _cli = UazAPIClient(base_url=_uaz.get("url", ""), token=_uaz.get("token", ""), instance_name=_uaz.get("instance", "default"))
+                        # Marca echo ANTES de enviar para evitar que webhook pause a IA
+                        if _ag.get('conversation_id'):
+                            await redis_client.setex(f"uaz_bot_sent:{_ag['conversation_id']}", 120, "1")
+                        await redis_client.setex(f"uaz_bot_sent:{_emp_id}:{_fone}", 120, "1")
                         await _cli.send_text(_fone, _msg)
                         await db_pool.execute("UPDATE agendamentos SET lembrete_1d_enviado = true WHERE id = $1", _ag['id'])
                         logger.info(f"📅 Lembrete 1D enviado para {_ag['cliente_nome']} (ag #{_ag['id']})")
@@ -3545,6 +3549,10 @@ async def worker_lembretes_agendamento():
                             _fone = "55" + _fone
 
                         _cli = UazAPIClient(base_url=_uaz.get("url", ""), token=_uaz.get("token", ""), instance_name=_uaz.get("instance", "default"))
+                        # Marca echo ANTES de enviar para evitar que webhook pause a IA
+                        if _ag.get('conversation_id'):
+                            await redis_client.setex(f"uaz_bot_sent:{_ag['conversation_id']}", 120, "1")
+                        await redis_client.setex(f"uaz_bot_sent:{_emp_id}:{_fone}", 120, "1")
                         await _cli.send_text(_fone, _msg)
                         await db_pool.execute("UPDATE agendamentos SET lembrete_1h_enviado = true WHERE id = $1", _ag['id'])
                         logger.info(f"⏰ Lembrete 1H enviado para {_ag['cliente_nome']} (ag #{_ag['id']})")
@@ -3962,6 +3970,9 @@ async def processar_ia_e_responder(
                                     token=_uaz_agr.get("token", ""),
                                     instance_name=_uaz_agr.get("instance", "default")
                                 )
+                                # Marca echo ANTES de enviar para evitar que webhook pause a IA
+                                await redis_client.setex(f"uaz_bot_sent:{conversation_id}", 120, "1")
+                                await redis_client.setex(f"uaz_bot_sent:{empresa_id}:{_fone_agr}", 120, "1")
                                 await _uaz_cli_agr.send_text(_fone_agr, _msg_obrigado)
                                 logger.info(f"🙏 Agradecimento de avaliação enviado para {_fone_agr}")
                             return  # Não precisa chamar a IA — avaliação processada
@@ -4975,6 +4986,9 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     instance_name=_uaz_confirm.get("instance", "default")
                                 )
                                 logger.info(f"📩 [Confirm] Enviando para {_cli_fone_limpo}: {_msg_cliente[:60]}...")
+                                # Marca echo ANTES de enviar para evitar que webhook pause a IA
+                                await redis_client.setex(f"uaz_bot_sent:{conversation_id}", 120, "1")
+                                await redis_client.setex(f"uaz_bot_sent:{empresa_id}:{_cli_fone_limpo}", 120, "1")
                                 await _uaz_cli_confirm.send_text(_cli_fone_limpo, _msg_cliente)
                                 logger.info(f"📩 Confirmação enviada para cliente {_ag_cliente_nome} ({_cli_fone_limpo})")
                             else:
@@ -5043,6 +5057,8 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     token=_uaz_notif.get("token", ""),
                                     instance_name=_uaz_notif.get("instance", "default")
                                 )
+                                # Marca echo para notificação do barbeiro
+                                await redis_client.setex(f"uaz_bot_sent:{empresa_id}:{_ag_barb_fone_limpo}", 120, "1")
                                 await _uaz_cli.send_text(_ag_barb_fone_limpo, _msg_barbeiro)
                                 logger.info(f"📲 Notificação enviada para barbeiro {_ag_barbeiro_nome} ({_ag_barb_fone_limpo})")
                             except Exception as e:
@@ -5093,6 +5109,9 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     token=_uaz_aval.get("token", ""),
                                     instance_name=_uaz_aval.get("instance", "default")
                                 )
+                                # Marca echo ANTES de enviar para evitar que webhook pause a IA
+                                await redis_client.setex(f"uaz_bot_sent:{conversation_id}", 120, "1")
+                                await redis_client.setex(f"uaz_bot_sent:{empresa_id}:{_fone_aval}", 120, "1")
                                 await _uaz_cli_aval.send_text(_fone_aval, _msg_aval)
                                 logger.info(f"⭐ Pedido de avaliação enviado via CONCLUIR para {_fone_aval}")
                         else:
