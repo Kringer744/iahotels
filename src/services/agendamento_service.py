@@ -282,14 +282,15 @@ async def criar_agendamento(
     """Cria um agendamento verificando conflitos."""
     duracao_minutos = int(duracao_minutos)  # Garante int (pode vir Decimal do DB)
 
-    # Verifica conflito — calcula intervalo no Python para evitar cast issues no PostgreSQL
+    # Verifica conflito — calcula tudo no Python para evitar cast issues no PostgreSQL
     data_hora_fim = data_hora + timedelta(minutes=duracao_minutos)
+    # Checa se já existe agendamento que se sobrepõe ao novo intervalo [data_hora, data_hora_fim]
     conflito = await db_pool.fetchval("""
         SELECT 1 FROM agendamentos
         WHERE barbeiro_id = $1
           AND status NOT IN ('cancelado')
-          AND data_hora < $3
-          AND data_hora + make_interval(mins => duracao_minutos::integer) > $2
+          AND data_hora::timestamp < $3::timestamp
+          AND (data_hora::timestamp + (COALESCE(duracao_minutos, 30) * interval '1 minute')) > $2::timestamp
         LIMIT 1
     """, barbeiro_id, data_hora, data_hora_fim)
 
