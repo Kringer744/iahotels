@@ -21,7 +21,7 @@ export default function Home() {
     <div className="flex min-h-screen items-center justify-center bg-mesh">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-gray-400 animate-pulse">Carregando Barber IA...</p>
+        <p className="text-gray-400 animate-pulse">Carregando Closer IA...</p>
       </div>
     </div>
   );

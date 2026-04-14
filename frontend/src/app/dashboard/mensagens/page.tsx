@@ -111,7 +111,7 @@ function WhatsAppPreview({ template }: { template: string }) {
           <Send className="w-3.5 h-3.5 text-white" />
         </div>
         <div>
-          <p className="text-xs font-bold text-white/90">Barber IA</p>
+          <p className="text-xs font-bold text-white/90">Closer IA</p>
           <p className="text-[10px] text-white/40">Prévia da mensagem</p>
         </div>
       </div>
@@ -299,7 +299,7 @@ export default function MensagensPage() {
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1.5 h-5 bg-[#E11D48] rounded-full" />
                 <span className="text-[10px] font-black text-[#E11D48] uppercase tracking-[0.4em]">
-                  Barber IA
+                  Closer IA
                 </span>
               </div>
               <h1 className="text-4xl font-black tracking-tight">

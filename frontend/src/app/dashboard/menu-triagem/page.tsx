@@ -107,7 +107,7 @@ export default function MenuTriagemPage() {
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1.5 h-5 bg-[#E11D48] rounded-full" />
                 <span className="text-[10px] font-black text-[#E11D48] uppercase tracking-[0.4em]">
-                  Barber IA
+                  Closer IA
                 </span>
               </div>
               <h1

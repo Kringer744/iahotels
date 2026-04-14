@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Barber IA - Dashboard",
-  description: "Plataforma de agendamento inteligente para barbearias",
+  title: "Closer IA - Dashboard",
+  description: "Plataforma de agendamento inteligente com IA",
 };
 
 export default function RootLayout({

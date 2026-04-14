@@ -205,10 +205,10 @@ export default function IntegrationsPage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1.5 h-5 bg-[#E11D48] rounded-full" />
-                <span className="text-[10px] font-black text-[#E11D48] uppercase tracking-[0.4em]">Barber IA</span>
+                <span className="text-[10px] font-black text-[#E11D48] uppercase tracking-[0.4em]">Closer IA</span>
               </div>
               <h1 className="text-4xl font-black tracking-tight" style={{ background: "linear-gradient(135deg,#fff 0%,#E11D48 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Barber Connect
+                Closer Connect
               </h1>
               <p className="text-slate-500 mt-2 text-sm italic">Gerencie as pontes entre seus canais de atendimento e o EVO.</p>
             </div>

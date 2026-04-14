@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Building2, Brain, HelpCircle, Network,
   Settings, LogOut, BarChart3, MessageSquare, Menu, X, Send,
-  Calendar, Users, Star, Scissors, UserCheck
+  Calendar, Users, Star, Scissors, UserCheck, Zap
 } from "lucide-react";
 
 interface SidebarProps {
@@ -53,13 +53,13 @@ export default function DashboardSidebar({ activePage = "dashboard" }: SidebarPr
       <div className="px-6 py-8 border-b border-white/5">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.location.href = "/dashboard"}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E11D48] to-[#BE123C] flex items-center justify-center shadow-lg shadow-[#E11D48]/20 group-hover:scale-110 transition-transform">
-            <Scissors className="w-5 h-5 text-black font-black" />
+            <Zap className="w-5 h-5 text-black font-black" />
           </div>
           <div>
             <p className="font-black text-lg leading-tight tracking-tighter text-white">
-              Barber <span className="font-light text-[#E11D48]/80">IA</span>
+              Closer <span className="font-light text-[#E11D48]/80">IA</span>
             </p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Smart Scheduling</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Smart Closing</p>
           </div>
         </div>
       </div>
