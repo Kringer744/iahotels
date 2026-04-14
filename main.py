@@ -824,7 +824,8 @@ INTENCOES = {
     "unidades": ["unidades", "outras unidades", "lista de unidades", "quantas unidades", "onde tem", "tem em", "unidade"],
     "modalidades": ["modalidades", "serviços", "comodidades", "restaurante", "piscina", "spa", "academia", "sauna", "suíte", "suite", "quarto", "acomodação", "acomodacao", "estrutura", "atividades"],
     "infraestrutura": ["estacionamento", "recepção", "lobby", "armários", "sauna", "piscina", "acessibilidade", "infraestrutura", "wifi", "café da manhã"],
-    "reserva": ["reserva", "reservar", "check-in", "checkout", "diaria", "diária", "booking", "disponibilidade", "disponivel", "disponível"]
+    "reserva": ["reserva", "reservar", "check-in", "checkout", "diaria", "diária", "booking", "disponibilidade", "disponivel", "disponível"],
+    "agendamento": ["agendar", "agendamento", "marcar", "horario disponivel", "horário disponível", "corte", "cortar", "barbeiro", "barbeiros", "cabelo", "barba", "degradê", "degrade", "navalhado", "sobrancelha", "platinado", "luzes", "coloração", "tintura"]
 }
 
 # Clientes de IA
@@ -3780,6 +3781,34 @@ async def processar_ia_e_responder(
         texto_cliente_unificado = " ".join([t for t in (textos + transcricoes) if t]).strip()
         if texto_cliente_unificado and not imagens_urls:
             intencao_motor = detectar_intencao(texto_cliente_unificado)
+
+        # ── AGENDAMENTO: injeta barbeiros + disponibilidade real do banco ──
+        if intencao_motor == "agendamento" and db_pool:
+            try:
+                from src.services.agendamento_service import (
+                    listar_barbeiros, listar_servicos,
+                    obter_proximos_dias_disponiveis,
+                )
+                _barbeiros = await listar_barbeiros(db_pool, empresa_id)
+                _servicos = await listar_servicos(db_pool, empresa_id)
+                _disponibilidade = await obter_proximos_dias_disponiveis(db_pool, empresa_id, dias_afrente=7)
+
+                _ctx_agend = []
+                if _barbeiros:
+                    _nomes_barb = ", ".join([b["nome"] for b in _barbeiros])
+                    _ctx_agend.append(f"Profissionais disponíveis: {_nomes_barb}")
+                if _servicos:
+                    _lista_serv = ", ".join([f"{s['nome']} (R${s.get('preco', '?')} - {s.get('duracao_minutos', 30)}min)" for s in _servicos])
+                    _ctx_agend.append(f"Serviços: {_lista_serv}")
+                if _disponibilidade:
+                    _ctx_agend.append(_disponibilidade)
+
+                if _ctx_agend:
+                    contexto_precarregado += "\n\n[AGENDAMENTO — dados reais do sistema]\n" + "\n".join(_ctx_agend)
+                    contexto_precarregado += "\n\nIMPORTANTE: Use APENAS os dados acima para responder sobre barbeiros, serviços e horários. NÃO invente informações."
+                    logger.info(f"📅 Contexto de agendamento injetado para empresa {empresa_id}")
+            except Exception as e:
+                logger.warning(f"⚠️ Erro ao carregar dados de agendamento: {e}")
 
         # Campos da unidade
         end_banco = extrair_endereco_unidade(unidade)
