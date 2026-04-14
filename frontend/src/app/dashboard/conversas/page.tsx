@@ -47,7 +47,7 @@ const eventoLabels: Record<string, string> = {
 
 const statusColor: Record<string, string> = {
   open: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
-  resolved: "bg-[#E11D48]/10 text-[#E11D48] border border-[#E11D48]/20",
+  resolved: "bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20",
   closed: "bg-slate-700/20 text-slate-500 border border-slate-700/20",
   encerrada: "bg-slate-500/15 text-slate-400 border border-slate-500/20",
   pending: "bg-amber-500/15 text-amber-400 border border-amber-500/20",
@@ -75,9 +75,10 @@ export default function ConversasPage() {
   const [eventos, setEventos] = useState<EventoFunil[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(false);
 
-  const getConfig = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-  });
+  const getConfig = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
 
   const fetchConversations = useCallback(async () => {
     setLoading(true);
@@ -166,8 +167,8 @@ export default function ConversasPage() {
         <header className="flex-shrink-0 bg-slate-950/80 border-b border-white/5 px-8 py-5 flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <MessageSquare className="w-5 h-5 text-[#E11D48]" />
-              <h1 className="text-xl font-black" style={{ background: "linear-gradient(135deg,#fff 0%,#E11D48 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <MessageSquare className="w-5 h-5 text-[#D4AF37]" />
+              <h1 className="text-xl font-black" style={{ background: "linear-gradient(135deg,#fff 0%,#D4AF37 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 Central de Inteligência
               </h1>
             </div>
@@ -175,11 +176,11 @@ export default function ConversasPage() {
           </div>
           <div className="flex items-center gap-3">
             <button onClick={exportLeads} disabled={exporting}
-              className="hidden sm:flex items-center gap-2 bg-white/5 hover:bg-[#E11D48]/10 border border-white/8 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-400 hover:text-[#E11D48] hover:border-[#E11D48]/20 disabled:opacity-50">
+              className="hidden sm:flex items-center gap-2 bg-white/5 hover:bg-[#D4AF37]/10 border border-white/8 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/20 disabled:opacity-50">
               <Download className="w-4 h-4" /> {exporting ? "Exportando..." : "Exportar Leads"}
             </button>
-            <button onClick={() => fetchConversations()} className="p-2.5 bg-white/5 hover:bg-[#E11D48]/10 rounded-xl border border-white/8 transition-all">
-              <RefreshCw className={`w-4 h-4 text-[#E11D48] ${loading ? "animate-spin" : ""}`} />
+            <button onClick={() => fetchConversations()} className="p-2.5 bg-white/5 hover:bg-[#D4AF37]/10 rounded-xl border border-white/8 transition-all">
+              <RefreshCw className={`w-4 h-4 text-[#D4AF37] ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
         </header>
@@ -192,7 +193,7 @@ export default function ConversasPage() {
               <form onSubmit={handleSearch} className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                 <input value={buscaInput} onChange={e => setBuscaInput(e.target.value)} placeholder="Buscar por nome ou fone..."
-                  className="w-full bg-slate-900/60 border border-white/8 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#E11D48]/40 transition-all" />
+                  className="w-full bg-slate-900/60 border border-white/8 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#D4AF37]/40 transition-all" />
               </form>
               <div className="flex gap-2 flex-wrap">
                 <select value={filterUnidade} onChange={e => { setFilterUnidade(e.target.value ? Number(e.target.value) : ""); setOffset(0); }}
@@ -237,15 +238,15 @@ export default function ConversasPage() {
               ) : (
                 conversations.map(conv => (
                   <button key={conv.id} onClick={() => setSelected(conv)}
-                    className={`w-full text-left px-5 py-5 border-b border-white/[0.03] transition-all relative group ${selected?.id === conv.id ? "bg-[#E11D48]/5" : "hover:bg-white/[0.02]"}`}>
-                    {selected?.id === conv.id && <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-[#E11D48] rounded-r-full shadow-[0_0_8px_rgba(225,29,72,0.6)]" />}
+                    className={`w-full text-left px-5 py-5 border-b border-white/[0.03] transition-all relative group ${selected?.id === conv.id ? "bg-[#D4AF37]/5" : "hover:bg-white/[0.02]"}`}>
+                    {selected?.id === conv.id && <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-[#D4AF37] rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.6)]" />}
                     <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl bg-slate-900/60 border border-white/5 flex items-center justify-center text-base font-black flex-shrink-0 group-hover:border-[#E11D48]/20 transition-colors">
+                      <div className="w-11 h-11 rounded-2xl bg-slate-900/60 border border-white/5 flex items-center justify-center text-base font-black flex-shrink-0 group-hover:border-[#D4AF37]/20 transition-colors">
                         {conv.contato_nome?.charAt(0) || "?"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <p className="text-sm font-black truncate group-hover:text-[#E11D48] transition-colors">{conv.contato_nome || "Anônimo"}</p>
+                          <p className="text-sm font-black truncate group-hover:text-[#D4AF37] transition-colors">{conv.contato_nome || "Anônimo"}</p>
                           <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0 ${statusColor[conv.status] || "bg-slate-700/20 text-slate-500"}`}>
                             {statusLabel[conv.status] || conv.status}
                           </span>
@@ -254,7 +255,7 @@ export default function ConversasPage() {
                         <div className="flex items-center gap-3">
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map(s => (
-                              <div key={s} className={`w-1.5 h-1.5 rounded-full ${s <= (conv.score_lead || 0) ? "bg-[#E11D48] shadow-[0_0_4px_rgba(225,29,72,0.5)]" : "bg-white/10"}`} />
+                              <div key={s} className={`w-1.5 h-1.5 rounded-full ${s <= (conv.score_lead || 0) ? "bg-[#D4AF37] shadow-[0_0_4px_rgba(212,175,55,0.5)]" : "bg-white/10"}`} />
                             ))}
                           </div>
                           {conv.pausada && (
@@ -300,14 +301,14 @@ export default function ConversasPage() {
                 className="flex-1 flex flex-col overflow-hidden bg-[#020617]/40 border-l border-white/5">
                 <div className="p-8 border-b border-white/5">
                   <div className="flex items-center justify-between mb-6 lg:hidden">
-                    <button onClick={() => setSelected(null)} className="p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-[#E11D48]/10 transition-all">
+                    <button onClick={() => setSelected(null)} className="p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-[#D4AF37]/10 transition-all">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-blue-600/20 to-[#E11D48]/20 border-2 border-[#E11D48]/20 flex items-center justify-center text-4xl font-black text-[#E11D48] relative flex-shrink-0">
+                    <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-blue-600/20 to-[#D4AF37]/20 border-2 border-[#D4AF37]/20 flex items-center justify-center text-4xl font-black text-[#D4AF37] relative flex-shrink-0">
                       {selected.contato_nome?.charAt(0) || "?"}
-                      <div className="absolute -bottom-2 -right-2 p-2.5 bg-[#E11D48] text-black rounded-xl shadow-lg">
+                      <div className="absolute -bottom-2 -right-2 p-2.5 bg-[#D4AF37] text-black rounded-xl shadow-lg">
                         <Zap className="w-4 h-4" />
                       </div>
                     </div>
@@ -319,7 +320,7 @@ export default function ConversasPage() {
                         </span>
                       </div>
                       <p className="text-slate-500 font-bold flex items-center gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-[#E11D48]/40" />
+                        <Clock className="w-4 h-4 text-[#D4AF37]/40" />
                         {selected.contato_fone || selected.contato_telefone}
                       </p>
                     </div>
@@ -355,7 +356,10 @@ export default function ConversasPage() {
                             setConversations(conversations.map(c => c.conversation_id === selected.conversation_id ? { ...c, total_mensagens_cliente: 0, total_mensagens_ia: 0 } : c));
                             setMemoryClearedId(String(selected.conversation_id));
                             setTimeout(() => setMemoryClearedId(null), 3000);
-                          } catch (err) { console.error(err); }
+                          } catch (err: any) {
+                            console.error(err);
+                            alert(err?.response?.data?.detail || "Erro ao limpar memória. Tente novamente.");
+                          }
                           finally { setClearingMemory(false); }
                         }}
                         disabled={clearingMemory}
@@ -381,16 +385,16 @@ export default function ConversasPage() {
                 <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Lead Score — dots visuais */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#E11D48]/15 transition-all">
+                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#D4AF37]/15 transition-all">
                       <div className="flex items-center gap-2 mb-3">
-                        <Star className="w-4 h-4 text-[#E11D48]/50" />
+                        <Star className="w-4 h-4 text-[#D4AF37]/50" />
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lead Score</span>
                       </div>
                       <div className="flex gap-1.5 items-center">
                         {[1, 2, 3, 4, 5].map(s => (
                           <div key={s} className={`w-3 h-3 rounded-full transition-all ${
                             s <= (selected.score_lead || 0)
-                              ? "bg-[#E11D48] shadow-[0_0_6px_rgba(225,29,72,0.6)]"
+                              ? "bg-[#D4AF37] shadow-[0_0_6px_rgba(212,175,55,0.6)]"
                               : "bg-white/10"
                           }`} />
                         ))}
@@ -399,9 +403,9 @@ export default function ConversasPage() {
                     </div>
 
                     {/* Intenção — ALTA / MÉDIA / BAIXA */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#E11D48]/15 transition-all">
+                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#D4AF37]/15 transition-all">
                       <div className="flex items-center gap-2 mb-3">
-                        <Flame className="w-4 h-4 text-[#E11D48]/50" />
+                        <Flame className="w-4 h-4 text-[#D4AF37]/50" />
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Intenção</span>
                       </div>
                       <p className="text-xl font-black">
@@ -410,9 +414,9 @@ export default function ConversasPage() {
                     </div>
 
                     {/* Mensagens */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#E11D48]/15 transition-all">
+                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#D4AF37]/15 transition-all">
                       <div className="flex items-center gap-2 mb-3">
-                        <MessageSquare className="w-4 h-4 text-[#E11D48]/50" />
+                        <MessageSquare className="w-4 h-4 text-[#D4AF37]/50" />
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mensagens</span>
                       </div>
                       <p className="text-xl font-black">
@@ -421,9 +425,9 @@ export default function ConversasPage() {
                     </div>
 
                     {/* Fase Funil — mapeamento completo */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#E11D48]/15 transition-all">
+                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#D4AF37]/15 transition-all">
                       <div className="flex items-center gap-2 mb-3">
-                        <Target className="w-4 h-4 text-[#E11D48]/50" />
+                        <Target className="w-4 h-4 text-[#D4AF37]/50" />
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fase Funil</span>
                       </div>
                       <p className="text-xl font-black">
@@ -435,16 +439,16 @@ export default function ConversasPage() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#E11D48]/15 transition-all">
+                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#D4AF37]/15 transition-all">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
-                        <Brain className="w-5 h-5 text-[#E11D48]" />
+                        <Brain className="w-5 h-5 text-[#D4AF37]" />
                         <h3 className="text-lg font-black uppercase tracking-widest">Resumo Neural</h3>
                       </div>
                       <button 
                         onClick={handleGenerateSummary}
                         disabled={summarizing}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#E11D48]/10 hover:bg-[#E11D48]/20 border border-[#E11D48]/20 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all disabled:opacity-50"
                       >
                         {summarizing ? (
                           <><RefreshCw className="w-3 h-3 animate-spin" /> Gerando...</>
@@ -458,7 +462,7 @@ export default function ConversasPage() {
                     </p>
                   </div>
 
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 space-y-4 hover:border-[#E11D48]/15 transition-all">
+                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 space-y-4 hover:border-[#D4AF37]/15 transition-all">
                     <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Informações de Tráfego</h4>
                     {[
                       { label: "Unidade de Origem", value: selected.unidade_nome || "—", icon: Building2 },
@@ -468,14 +472,14 @@ export default function ConversasPage() {
                     ].map(row => (
                       <div key={row.label} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 last:pb-0">
                         <span className="text-sm font-bold text-slate-500 flex items-center gap-2.5">
-                          <row.icon className="w-4 h-4 text-[#E11D48]/40" /> {row.label}
+                          <row.icon className="w-4 h-4 text-[#D4AF37]/40" /> {row.label}
                         </span>
                         <span className="text-sm font-black">{row.value}</span>
                       </div>
                     ))}
                     <div className="flex justify-between items-center py-3">
                       <span className="text-sm font-bold text-slate-500 flex items-center gap-2.5">
-                        <CheckCircle className="w-4 h-4 text-[#E11D48]/40" /> Lead Qualificado
+                        <CheckCircle className="w-4 h-4 text-[#D4AF37]/40" /> Lead Qualificado
                       </span>
                       <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                         selected.lead_qualificado
@@ -487,9 +491,9 @@ export default function ConversasPage() {
                     </div>
                   </div>
                   {/* Histórico de Pontuação */}
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#E11D48]/15 transition-all">
+                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#D4AF37]/15 transition-all">
                     <div className="flex items-center gap-3 mb-5">
-                      <TrendingUp className="w-5 h-5 text-[#E11D48]" />
+                      <TrendingUp className="w-5 h-5 text-[#D4AF37]" />
                       <h3 className="text-lg font-black uppercase tracking-widest">Histórico de Pontuação</h3>
                     </div>
 
@@ -512,8 +516,8 @@ export default function ConversasPage() {
                       <div className="space-y-1">
                         {eventos.map((ev, idx) => (
                           <div key={idx} className="flex items-start gap-4 py-3 border-b border-white/5 last:border-0 last:pb-0">
-                            <div className="w-8 h-8 rounded-xl bg-[#E11D48]/10 border border-[#E11D48]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Star className="w-3.5 h-3.5 text-[#E11D48]" />
+                            <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Star className="w-3.5 h-3.5 text-[#D4AF37]" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-black">{eventoLabels[ev.tipo_evento] ?? ev.tipo_evento}</p>
@@ -548,7 +552,7 @@ export default function ConversasPage() {
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225,29,72,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.1); border-radius: 10px; }
       `}</style>
     </div>
   );

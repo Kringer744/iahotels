@@ -323,6 +323,21 @@ async def limpar_memoria_conversa(
     if not ok:
         raise HTTPException(status_code=404, detail="Conversa não encontrada ou sem permissão")
 
+    # Limpa memória de longo prazo (memoria_cliente) do contato associado à conversa
+    try:
+        contato_fone = await _database.db_pool.fetchval(
+            "SELECT contato_fone FROM conversas WHERE conversation_id = $1 AND empresa_id = $2",
+            conversation_id, empresa_id
+        )
+        if contato_fone:
+            await _database.db_pool.execute(
+                "DELETE FROM memoria_cliente WHERE contato_fone = $1 AND empresa_id = $2",
+                contato_fone, empresa_id
+            )
+            await redis_client.delete(f"{empresa_id}:memoria_lp:{contato_fone}")
+    except Exception as e:
+        logger.warning(f"Aviso ao limpar memoria_cliente da conversa {conversation_id}: {e}")
+
     # Deleta todas as chaves Redis da conversa (formato padronizado: {empresa_id}:{chave}:{conversation_id})
     await redis_client.delete(
         f"{empresa_id}:estado:{conversation_id}",
@@ -535,12 +550,9 @@ async def criar_unidade(
             body.link_matricula,
             json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
             json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
-            json.dumps(body.planos or {}),
-            json.dumps(body.formas_pagamento or {}),
-            json.dumps(body.convenios or {}),
-            json.dumps(body.infraestrutura or {}),
-            json.dumps(body.servicos or {}),
-            body.palavras_chave if body.palavras_chave else [],
+            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
+            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
+            json.dumps(body.servicos or {}), body.palavras_chave or [],
             body.foto_grade or None, body.link_tour_virtual or None
         )
         from src.core.redis_client import redis_client
@@ -755,12 +767,9 @@ async def atualizar_unidade(
             body.whatsapp, body.site, body.instagram, body.link_matricula,
             json.dumps(body.horarios) if body.horarios and body.horarios != "" else None,
             json.dumps(body.modalidades) if body.modalidades and body.modalidades != "" else None,
-            json.dumps(body.planos or {}),
-            json.dumps(body.formas_pagamento or {}),
-            json.dumps(body.convenios or {}),
-            json.dumps(body.infraestrutura or {}),
-            json.dumps(body.servicos or {}),
-            body.palavras_chave if body.palavras_chave else [],
+            json.dumps(body.planos or {}), json.dumps(body.formas_pagamento or {}),
+            json.dumps(body.convenios or {}), json.dumps(body.infraestrutura or {}),
+            json.dumps(body.servicos or {}), body.palavras_chave or [],
             body.foto_grade or None, body.link_tour_virtual or None,
             unidade_id, empresa_id
         )

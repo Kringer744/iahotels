@@ -110,13 +110,11 @@ from src.api.routers.dashboard import router as dashboard_router
 from src.api.routers.management import router as management_router
 from src.api.routers.uaz_webhook import router as uaz_webhook_router
 from src.api.routers.ws import router as ws_router
-from src.api.routers.agendamento import router as agendamento_router
 app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(management_router)
 app.include_router(uaz_webhook_router)
 app.include_router(ws_router)
-app.include_router(agendamento_router)
 
 # ── Middleware de Rate Limit Global ──────────────────────────────────────────
 # Bloqueia IPs e empresas que abusem do endpoint /webhook
@@ -468,7 +466,7 @@ def classificar_intencao(texto: str) -> str:
         return "unidades"
     if re.search(r"(preco|preço|valor|mensalidade|quanto custa|plano|planos|promo|promocao|promoção)", t):
         return "planos"
-    if re.search(r"(corte|barba|barbeiro|navalha|degradê|degrade|pigmentacao|pigmentação|sobrancelha|lazer|servicos|serviços|comodidades|estrutura|atividades|modalidade|modalidades|grade)", t):
+    if re.search(r"(restaurante|cafe da manha|café da manhã|piscina|spa|academia|sauna|lazer|servicos|serviços|comodidades|estrutura|atividades|suite|suíte|quarto|acomodacao|acomodação|cama|beliche|modalidade|modalidades|grade)", t):
         return "modalidades"
     if re.search(r"(booking|airbnb|expedia|decolar|convenio|convênio|tarifa corporativa|parceria|ota|gympass|wellhub|totalpass)", t):
         return "convenio"
@@ -481,11 +479,11 @@ def _faq_compativel_com_intencao(intencao: str, pergunta_faq: str) -> bool:
         return True
 
     mapa = {
-        "modalidades": {"corte", "barba", "barbeiro", "navalha", "degradê", "degrade", "servico", "comodidade", "modalidade", "modalidades"},
-        "horario": {"horario", "funcionamento", "abre", "fecha", "atendimento"},
+        "modalidades": {"restaurante", "piscina", "spa", "academia", "lazer", "servico", "comodidade", "suite", "suíte", "quarto", "acomodacao", "modalidade", "modalidades"},
+        "horario": {"horario", "funcionamento", "abre", "fecha", "check-in", "checkout"},
         "endereco": {"endereco", "endereço", "local", "unidade", "fica"},
         "telefone": {"telefone", "whatsapp", "contato", "numero", "número"},
-        "planos": {"plano", "planos", "valor", "preco", "preço", "servico", "serviço", "agendamento", "beneficio", "benefício"},
+        "planos": {"plano", "planos", "valor", "preco", "preço", "diaria", "tarifa", "reserva", "beneficio", "benefício"},
         "convenio": {"convenio", "convênio", "booking", "airbnb", "expedia", "parceria"},
     }
     chaves = mapa.get(intencao)
@@ -527,7 +525,7 @@ async def resolver_contexto_unidade(
                 break
 
             # Match por tokens do nome da unidade (suporta "ricardo jafet" sem nome completo)
-            tokens_nome_sig = {t for t in nome_u.split() if len(t) >= 4 and t not in {"barbearia", "barber", "unidade", "studio"}}
+            tokens_nome_sig = {t for t in nome_u.split() if len(t) >= 4 and t not in {"hotel", "resort", "pousada", "unidade", "suite", "suíte"}}
             if len(tokens_texto_sig & tokens_nome_sig) >= 1:
                 tem_geo = True
                 break
@@ -782,17 +780,19 @@ def montar_saudacao_humanizada(
     return "\n\n".join(partes)
 
 
-# 💈 PALAVRAS-CHAVE DE TIPO DE CLIENTE — detecta cliente existente ou parceiro
+# 🏨 PALAVRAS-CHAVE DE TIPO DE CLIENTE — detecta hóspede atual ou usuário de plataforma/convênio
 ALUNO_KEYWORDS = [
-    "sou cliente", "ja sou cliente", "já sou cliente", "sou membro",
-    "meu agendamento", "meu horário", "meu horario", "minha agenda",
-    "cancelar meu agendamento", "remarcar", "segunda via",
-    "alterar agendamento", "trocar horário", "trocar horario", "problema com",
+    "sou hospede", "sou hóspede", "ja sou hospede", "já sou hóspede", "sou cliente", "sou membro",
+    "minha reserva", "meu check-in", "meu checkout", "minha estadia",
+    "cancelar minha reserva", "remarcar", "segunda via",
+    "fatura do hotel", "conta do quarto", "nota fiscal",
+    "mudei de quarto", "troca de quarto", "problema com",
     "atendimento ao cliente", "suporte", "reclamacao", "reclamação",
 ]
 
 GYMPASS_KEYWORDS = [
-    "convenio", "convênio", "beneficio corporativo", "benefício corporativo",
+    "booking", "airbnb", "expedia", "decolar", "hotels.com", "trivago",
+    "convenio", "convênio", "tarifa corporativa", "beneficio corporativo", "benefício corporativo",
     "pelo app", "pelo aplicativo", "app parceiro", "parceria empresa",
     "plano empresarial", "beneficio da empresa", "benefício da empresa",
 ]
@@ -800,8 +800,8 @@ GYMPASS_KEYWORDS = [
 
 def detectar_tipo_cliente(texto: str) -> Optional[str]:
     """
-    Detecta se o contato já é cliente (suporte/cancelamento/dúvidas)
-    ou veio via parceiro (roteamento diferente).
+    Detecta se o contato já é hóspede (suporte/cancelamento/dúvidas)
+    ou reservou via plataforma (roteamento diferente).
     Retorna: 'aluno' | 'gympass' | None
     """
     if not texto:
@@ -820,9 +820,9 @@ INTENCOES = {
     "endereco": ["endereco", "endereço", "local", "localização", "fica", "onde fica", "como chegar", "localizacao"],
     "telefone": ["telefone", "contato", "whatsapp", "numero", "número", "ligar", "falar", "telefone"],
     "unidades": ["unidades", "outras unidades", "lista de unidades", "quantas unidades", "onde tem", "tem em", "unidade"],
-    "modalidades": ["modalidades", "serviços", "comodidades", "corte", "barba", "barbeiro", "navalha", "degradê", "degrade", "estrutura", "atividades"],
-    "infraestrutura": ["estacionamento", "recepção", "acessibilidade", "infraestrutura", "wifi", "ar condicionado"],
-    "agendamento": ["agendamento", "agendar", "marcar", "horário disponível", "horario disponivel", "disponibilidade", "disponivel", "disponível"]
+    "modalidades": ["modalidades", "serviços", "comodidades", "restaurante", "piscina", "spa", "academia", "sauna", "suíte", "suite", "quarto", "acomodação", "acomodacao", "estrutura", "atividades"],
+    "infraestrutura": ["estacionamento", "recepção", "lobby", "armários", "sauna", "piscina", "acessibilidade", "infraestrutura", "wifi", "café da manhã"],
+    "reserva": ["reserva", "reservar", "check-in", "checkout", "diaria", "diária", "booking", "disponibilidade", "disponivel", "disponível"]
 }
 
 # Clientes de IA
@@ -864,11 +864,11 @@ end
 
 # Regex compiladas para intenções frequentes (manutenção centralizada)
 REGEX_PEDIDO_PLANOS = re.compile(
-    r"(preco|valor(es)?|quanto (custa|cobra|fica)|servico|serviço|planos?|promocao|promoç|"
-    r"beneficio|benefícios|benefíci|quais.{0,10}(planos?|servicos?|opcoes?)|me (fala|mostra|manda).{0,15}(planos?|servicos?)|"
-    r"tem (planos?|servicos?|corte)|ver (planos?|servicos?)|quero (agendar|marcar|assinar|contratar)|"
-    r"como (faço|faz|funciona).{0,10}(agendamento|agendar|marcar)|"
-    r"quanto (é|e|custa|vale) (o corte|a barba|o servico)|opcoes.{0,10}(planos?|servicos?)|opções.{0,10}(planos?|servicos?))",
+    r"(preco|valor(es)?|quanto (custa|cobra|fica)|diaria|diária|tarifa|tarifas|planos?|promocao|promoç|"
+    r"beneficio|benefícios|benefíci|quais.{0,10}(planos?|tarifas?|opcoes?)|me (fala|mostra|manda).{0,15}(planos?|tarifas?)|"
+    r"tem (planos?|tarifas?|quarto)|ver (planos?|tarifas?)|quero (reservar|me hospedar|assinar|contratar)|"
+    r"como (faço|faz|funciona).{0,10}(reserva|check.in|hospedar)|"
+    r"quanto (é|e|custa|vale) (a diaria|o quarto|a suite)|opcoes.{0,10}(planos?|quartos?)|opções.{0,10}(planos?|quartos?))",
     re.IGNORECASE,
 )
 REGEX_PEDIDO_END_HOR = re.compile(
@@ -879,8 +879,8 @@ REGEX_PEDIDO_END_HOR = re.compile(
 REGEX_PEDIDO_CONTATO = re.compile(r"(telefone|contato|whatsapp|numero|ligar|falar com alguem)", re.IGNORECASE)
 REGEX_LISTAR_UNIDADES = re.compile(
     r"(quais.{0,15}unidades?|quantas.{0,10}unidades?|tem.{0,20}unidades?|unidades?.{0,10}tem|"
-    r"mais.{0,10}unidades?|outras.{0,10}unidades?|lista.{0,10}unidades?|onde.{0,10}barbearia|"
-    r"barbearia.{0,15}(sp|sao paulo|rio|rj|mg|bh)|saber.{0,10}unidades?|todas.{0,10}unidades?|"
+    r"mais.{0,10}unidades?|outras.{0,10}unidades?|lista.{0,10}unidades?|onde.{0,10}hotel|"
+    r"hotel.{0,15}(sp|sao paulo|rio|rj|mg|bh)|saber.{0,10}unidades?|todas.{0,10}unidades?|"
     r"unidades?.{0,10}existem|unidades?.{0,10}disponiveis|unidades?.{0,10}abertas|"
     r"unidades?.{0,15}(sp|sao paulo|rio|rj|mg|bh|campinas|curitiba|belo horizonte|brasilia))",
     re.IGNORECASE,
@@ -1019,7 +1019,6 @@ async def startup_event():
         asyncio.create_task(worker_metricas_diarias(), name="worker_metricas_diarias"),
         asyncio.create_task(worker_sync_planos(), name="worker_sync_planos"),
         asyncio.create_task(worker_cleanup_followups(), name="worker_cleanup_followups"),
-        asyncio.create_task(worker_lembretes_agendamento(), name="worker_lembretes_agendamento"),
         # asyncio.create_task(worker_resumo_ia(), name="worker_resumo_ia"),
     ]
     for _task in worker_tasks:
@@ -1294,9 +1293,9 @@ def formatar_planos_bonito(planos: List[Dict], destacar_melhor_preco: bool = Tru
             linhas.append("")
             linhas.append(f"⚡ *Oferta: {meses_promo}x R${promo_fmt}/mês*")
 
-        # Link de agendamento
+        # Link de reserva
         linhas.append("")
-        linhas.append("👉 Agende agora:")
+        linhas.append("👉 Reserve agora:")
         linhas.append(link.strip())
 
         # ⚠️ SEM pergunta de fechamento aqui — vai só no último bloco (ver abaixo)
@@ -1314,7 +1313,7 @@ def formatar_planos_bonito(planos: List[Dict], destacar_melhor_preco: bool = Tru
 
 
 def filtrar_planos_por_contexto(texto_cliente: str, planos: List[Dict]) -> List[Dict]:
-    """Prioriza serviços/preços mais aderentes ao que o cliente pediu."""
+    """Prioriza acomodações/tarifas mais aderentes ao que o hóspede pediu."""
     if not planos:
         return []
 
@@ -1323,9 +1322,9 @@ def filtrar_planos_por_contexto(texto_cliente: str, planos: List[Dict]) -> List[
         return planos
 
     intencoes = {
-        "completo": ["completo", "pacote completo", "corte e barba", "combo"],
+        "suite": ["suite", "suíte", "suite superior", "suite master", "suite premium"],
         "standard": ["standard", "basico", "básico", "simples", "mais barato"],
-        "premium": ["premium", "vip", "luxo", "melhor", "top"],
+        "premium": ["premium", "vip", "luxo", "melhor", "top", "completo"],
         "economico": ["barato", "mais em conta", "economico", "econômico", "preco", "preço", "custo"],
     }
 
@@ -1918,7 +1917,7 @@ async def buscar_planos_ativos(empresa_id: int, unidade_id: int = None, force_sy
         rows = await db_pool.fetch(query, *params)
         planos = [dict(r) for r in rows]
 
-        await redis_set_json(cache_key, planos, 60)
+    await redis_set_json(cache_key, planos, 60)
     return planos
 
 
@@ -2164,14 +2163,14 @@ def _label_qualif(texto_cliente: str, novo_estado: str, intencao_compra: bool = 
     txt = normalizar(texto_cliente or "")
     st = normalizar(novo_estado or "")
 
-    if re.search(r"(ja sou cliente|já sou cliente|sou cliente|ja tenho agendamento|já tenho agendamento|ja sou aluno|já sou aluno|sou aluno)", txt):
+    if re.search(r"(ja sou hospede|já sou hóspede|sou hospede|ja tenho reserva|já tenho reserva|ja sou aluno|já sou aluno|sou aluno)", txt):
         return "QUALIF::ALUNO_EXISTENTE"
     if re.search(r"(nao tenho interesse|não tenho interesse|so queria saber|só queria saber|so pesquisando|só pesquisando)", txt):
         return "QUALIF::NAO_QUALIFICADO"
 
-    if intencao_compra or any(k in st for k in ["conversao", "matricula", "agendamento"]):
+    if intencao_compra or any(k in st for k in ["conversao", "matricula", "reserva"]):
         return "QUALIF::LEAD_QUENTE"
-    if any(k in st for k in ["interessado", "animado", "hesitante"]) or re.search(r"(plano|servico|serviço|preco|preço|valor|agendamento|corte)", txt):
+    if any(k in st for k in ["interessado", "animado", "hesitante"]) or re.search(r"(plano|tarifas|preco|preço|valor|reserva|diaria)", txt):
         return "QUALIF::LEAD_MORNO"
     return "QUALIF::LEAD_FRIO"
 
@@ -2360,7 +2359,6 @@ async def enviar_mensagem_chatwoot(
         return resp
     except Exception as e:
         logger.error(f"❌ Erro final ao enviar mensagem: {e}")
-        return None
         if _PROMETHEUS_OK:
             METRIC_ERROS_TOTAL.labels(tipo="chatwoot_unknown").inc()
         return None
@@ -2369,36 +2367,123 @@ async def enviar_mensagem_chatwoot(
 # --- BACKGROUND JOBS & FOLLOW-UP ---
 
 async def agendar_followups(conversation_id: int, account_id: int, slug: str, empresa_id: int):
-    """DESATIVADO — followups substituídos por lembretes de agendamento (worker_lembretes_agendamento)."""
-    # Cancela qualquer followup pendente restante
-    if db_pool:
-        try:
+    if not db_pool:
+        return
+    try:
+        await db_pool.execute("""
+            UPDATE followups SET status = 'cancelado'
+            WHERE conversa_id = (SELECT id FROM conversas WHERE conversation_id = $1)
+              AND status = 'pendente'
+        """, conversation_id)
+
+        templates = await db_pool.fetch("""
+            SELECT t.*
+            FROM templates_followup t
+            WHERE t.empresa_id = $1
+              AND t.ativo = true
+            ORDER BY t.ordem
+        """, empresa_id)
+
+        agora = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
+        for t in templates:
+            agendado_para = agora + timedelta(minutes=t["delay_minutos"])
             await db_pool.execute("""
-                UPDATE followups SET status = 'cancelado'
-                WHERE conversa_id = (SELECT id FROM conversas WHERE conversation_id = $1)
-                  AND status = 'pendente'
-            """, conversation_id)
-        except Exception:
-            pass
-    return
+                INSERT INTO followups
+                    (conversa_id, empresa_id, unidade_id, template_id, tipo, mensagem, ordem, agendado_para, status)
+                VALUES (
+                    (SELECT id FROM conversas WHERE conversation_id = $1 AND empresa_id = $2),
+                    $2,
+                    (SELECT id FROM unidades WHERE slug = $3 AND empresa_id = $2),
+                    $4, $5, $6, $7, $8, 'pendente'
+                )
+            """, conversation_id, empresa_id, slug, t["id"], t["tipo"], t["mensagem"], t["ordem"], agendado_para)
+
+        logger.info(f"📅 {len(templates)} follow-ups agendados para conversa {conversation_id}")
+    except Exception as e:
+        logger.error(f"Erro ao agendar followups: {e}")
 
 
 async def worker_followup():
-    """DESATIVADO — followups substituídos por lembretes de agendamento."""
     try:
-        # Na primeira execução, cancela todos os followups pendentes restantes
-        await asyncio.sleep(10)
-        if db_pool:
-            try:
-                _cancelados = await db_pool.execute(
-                    "UPDATE followups SET status = 'cancelado' WHERE status = 'pendente'"
-                )
-                logger.info(f"🛑 [Followup Worker] DESATIVADO. Followups pendentes cancelados: {_cancelados}")
-            except Exception as e:
-                logger.warning(f"⚠️ Erro ao cancelar followups pendentes: {e}")
-        # Worker encerra — lembretes de agendamento são gerenciados por worker_lembretes_agendamento
         while True:
-            await asyncio.sleep(3600)  # Dorme 1h — não faz nada
+            await asyncio.sleep(30)
+            # Garante que apenas 1 worker processe follow-ups em ambiente multi-processo
+            if not await _is_worker_leader("followup", ttl=40):
+                continue
+            if not db_pool:
+                continue
+            try:
+                agora = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
+
+                pendentes = await db_pool.fetch("""
+                    SELECT f.*, c.conversation_id, c.account_id, u.slug, c.empresa_id,
+                           u.nome AS nome_unidade, c.contato_nome
+                    FROM followups f
+                    JOIN conversas c ON c.id = f.conversa_id
+                    LEFT JOIN unidades u ON u.id = f.unidade_id
+                    WHERE f.status = 'pendente' AND f.agendado_para <= $1
+                    ORDER BY f.agendado_para
+                    LIMIT 20
+                    FOR UPDATE OF f SKIP LOCKED
+                """, agora)
+
+                # Cache de empresas que têm templates ativos (evita query repetida por followup)
+                _empresas_com_templates: dict[int, bool] = {}
+
+                for f in pendentes:
+                    # Verifica se a empresa ainda possui templates de followup ativos
+                    _eid = f['empresa_id']
+                    if _eid not in _empresas_com_templates:
+                        _tem = await db_pool.fetchval(
+                            "SELECT 1 FROM templates_followup WHERE empresa_id = $1 AND ativo = true LIMIT 1",
+                            _eid
+                        )
+                        _empresas_com_templates[_eid] = bool(_tem)
+                    if not _empresas_com_templates[_eid]:
+                        await db_pool.execute("UPDATE followups SET status = 'cancelado' WHERE id = $1", f['id'])
+                        continue
+
+                    if (
+                        await redis_client.get(f"atend_manual:{f['empresa_id']}:{f['conversation_id']}") == "1"
+                        or await redis_client.get(f"pause_ia:{f['empresa_id']}:{f['conversation_id']}") == "1"
+                    ):
+                        await db_pool.execute("UPDATE followups SET status = 'cancelado' WHERE id = $1", f['id'])
+                        continue
+
+                    respondeu = await db_pool.fetchval("""
+                        SELECT 1 FROM mensagens
+                        WHERE conversa_id = $1 AND role = 'user' AND created_at > NOW() - interval '5 minutes'
+                    """, f['conversa_id'])
+                    if respondeu:
+                        await db_pool.execute("UPDATE followups SET status = 'cancelado' WHERE id = $1", f['id'])
+                        continue
+
+                    integracao = await carregar_integracao(f['empresa_id'], 'chatwoot')
+                    if not integracao:
+                        await db_pool.execute(
+                            "UPDATE followups SET status = 'erro', erro_log = 'Sem integração' WHERE id = $1", f['id']
+                        )
+                        continue
+
+                    # Carrega nome_ia da personalidade (evita "Assistente Virtual" hardcoded)
+                    _pers_fu = await carregar_personalidade(f['empresa_id']) or {}
+                    _nome_ia_fu = _pers_fu.get('nome_ia') or 'Atendente'
+
+                    nome_contato = (f['contato_nome'] or '').split()[0] if f['contato_nome'] else 'você'
+                    nome_unidade = (f['nome_unidade'] or '').strip()
+                    if not nome_unidade and f.get('slug'):
+                        nome_unidade = str(f['slug']).replace('-', ' ').replace('_', ' ').title()
+                    mensagem_followup = _render_followup_template(f['mensagem'] or '', nome_contato, nome_unidade)
+
+                    await enviar_mensagem_chatwoot(
+                        f['account_id'], f['conversation_id'], mensagem_followup, _nome_ia_fu, integracao, f['empresa_id']
+                    )
+                    await db_pool.execute(
+                        "UPDATE followups SET status = 'enviado', enviado_em = NOW() WHERE id = $1", f['id']
+                    )
+
+            except Exception as e:
+                logger.error(f"Erro no worker de follow-up: {e}")
     except asyncio.CancelledError:
         logger.info("🛑 worker_followup cancelado")
         raise
@@ -2432,159 +2517,6 @@ async def worker_cleanup_followups():
         raise
 
 
-async def worker_lembretes_agendamento():
-    """
-    Worker que envia lembretes de agendamento:
-    - 1 dia antes: confirmação
-    - 1 hora antes: lembrete final
-    - Pós-corte (status=concluido): pedido de avaliação
-    Roda a cada 60 segundos.
-    """
-    from src.services.agendamento_service import (
-        formatar_lembrete, formatar_pedido_avaliacao,
-    )
-    try:
-        while True:
-            await asyncio.sleep(60)
-            if not db_pool:
-                continue
-            if not await _is_worker_leader("lembretes_agendamento", ttl=70):
-                continue
-            try:
-                agora = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
-
-                # ── Lembrete 1 DIA antes ──
-                amanha_inicio = agora + timedelta(hours=23)
-                amanha_fim = agora + timedelta(hours=25)
-                pendentes_1d = await db_pool.fetch("""
-                    SELECT a.*, b.nome as barbeiro_nome
-                    FROM agendamentos a
-                    JOIN barbeiros b ON b.id = a.barbeiro_id
-                    WHERE a.status = 'confirmado'
-                      AND a.lembrete_1d_enviado = false
-                      AND a.data_hora BETWEEN $1 AND $2
-                """, amanha_inicio, amanha_fim)
-
-                for ag in pendentes_1d:
-                    try:
-                        _pers = await carregar_personalidade(ag['empresa_id']) or {}
-                        _templates = {k: v for k, v in _pers.items() if k.startswith('msg_') and v}
-                        msg = formatar_lembrete(dict(ag), ag['barbeiro_nome'], tipo="1d", templates=_templates)
-                        integracao = await carregar_integracao(ag['empresa_id'], 'chatwoot')
-                        if integracao and ag.get('conversation_id'):
-                            _nome_ia = _pers.get('nome_ia') or 'Atendente'
-                            await enviar_mensagem_chatwoot(
-                                None, ag['conversation_id'], msg, _nome_ia, integracao, ag['empresa_id']
-                            )
-                        elif ag.get('cliente_telefone'):
-                            _uaz = await carregar_integracao(ag['empresa_id'], 'uazapi')
-                            if _uaz:
-                                uaz_cli = UazAPIClient(
-                                    _uaz.get('url') or _uaz.get('api_url'),
-                                    _uaz.get('token'),
-                                    _uaz.get('instance', 'default')
-                                )
-                                fone = "".join(filter(str.isdigit, str(ag['cliente_telefone'])))
-                                await uaz_cli.send_text(fone, msg)
-                        await db_pool.execute(
-                            "UPDATE agendamentos SET lembrete_1d_enviado = true WHERE id = $1", ag['id']
-                        )
-                        logger.info(f"📅 Lembrete 1d enviado para agendamento #{ag['id']}")
-                    except Exception as e:
-                        logger.error(f"Erro lembrete 1d agendamento #{ag['id']}: {e}")
-
-                # ── Lembrete 1 HORA antes ──
-                daqui_1h_inicio = agora + timedelta(minutes=55)
-                daqui_1h_fim = agora + timedelta(minutes=65)
-                pendentes_1h = await db_pool.fetch("""
-                    SELECT a.*, b.nome as barbeiro_nome
-                    FROM agendamentos a
-                    JOIN barbeiros b ON b.id = a.barbeiro_id
-                    WHERE a.status = 'confirmado'
-                      AND a.lembrete_1h_enviado = false
-                      AND a.data_hora BETWEEN $1 AND $2
-                """, daqui_1h_inicio, daqui_1h_fim)
-
-                for ag in pendentes_1h:
-                    try:
-                        _pers = await carregar_personalidade(ag['empresa_id']) or {}
-                        _templates = {k: v for k, v in _pers.items() if k.startswith('msg_') and v}
-                        msg = formatar_lembrete(dict(ag), ag['barbeiro_nome'], tipo="1h", templates=_templates)
-                        integracao = await carregar_integracao(ag['empresa_id'], 'chatwoot')
-                        if integracao and ag.get('conversation_id'):
-                            _nome_ia = _pers.get('nome_ia') or 'Atendente'
-                            await enviar_mensagem_chatwoot(
-                                None, ag['conversation_id'], msg, _nome_ia, integracao, ag['empresa_id']
-                            )
-                        elif ag.get('cliente_telefone'):
-                            _uaz = await carregar_integracao(ag['empresa_id'], 'uazapi')
-                            if _uaz:
-                                uaz_cli = UazAPIClient(
-                                    _uaz.get('url') or _uaz.get('api_url'),
-                                    _uaz.get('token'),
-                                    _uaz.get('instance', 'default')
-                                )
-                                fone = "".join(filter(str.isdigit, str(ag['cliente_telefone'])))
-                                await uaz_cli.send_text(fone, msg)
-                        await db_pool.execute(
-                            "UPDATE agendamentos SET lembrete_1h_enviado = true WHERE id = $1", ag['id']
-                        )
-                        logger.info(f"⏰ Lembrete 1h enviado para agendamento #{ag['id']}")
-                    except Exception as e:
-                        logger.error(f"Erro lembrete 1h agendamento #{ag['id']}: {e}")
-
-                # ── Avaliação pós-corte ──
-                concluidos = await db_pool.fetch("""
-                    SELECT a.*, b.nome as barbeiro_nome
-                    FROM agendamentos a
-                    JOIN barbeiros b ON b.id = a.barbeiro_id
-                    WHERE a.status = 'concluido'
-                      AND a.avaliacao_enviada = false
-                """)
-
-                for ag in concluidos:
-                    try:
-                        _pers = await carregar_personalidade(ag['empresa_id']) or {}
-                        _templates = {k: v for k, v in _pers.items() if k.startswith('msg_') and v}
-                        msg = formatar_pedido_avaliacao(dict(ag), ag['barbeiro_nome'], templates=_templates)
-                        # Marca flag no Redis para capturar resposta numérica como avaliação
-                        if ag.get('cliente_telefone'):
-                            fone = "".join(filter(str.isdigit, str(ag['cliente_telefone'])))
-                            await redis_client.setex(
-                                f"aguardando_avaliacao:{fone}", 86400,
-                                f"{ag['id']}:{ag['barbeiro_id']}:{ag['empresa_id']}"
-                            )
-
-                        integracao = await carregar_integracao(ag['empresa_id'], 'chatwoot')
-                        if integracao and ag.get('conversation_id'):
-                            _pers = await carregar_personalidade(ag['empresa_id']) or {}
-                            _nome_ia = _pers.get('nome_ia') or 'Atendente'
-                            await enviar_mensagem_chatwoot(
-                                None, ag['conversation_id'], msg, _nome_ia, integracao, ag['empresa_id']
-                            )
-                        elif ag.get('cliente_telefone'):
-                            _uaz = await carregar_integracao(ag['empresa_id'], 'uazapi')
-                            if _uaz:
-                                uaz_cli = UazAPIClient(
-                                    _uaz.get('url') or _uaz.get('api_url'),
-                                    _uaz.get('token'),
-                                    _uaz.get('instance', 'default')
-                                )
-                                await uaz_cli.send_text(fone, msg)
-                        await db_pool.execute(
-                            "UPDATE agendamentos SET avaliacao_enviada = true WHERE id = $1", ag['id']
-                        )
-                        logger.info(f"⭐ Avaliação enviada para agendamento #{ag['id']}")
-                    except Exception as e:
-                        logger.error(f"Erro avaliação agendamento #{ag['id']}: {e}")
-
-            except Exception as e:
-                logger.error(f"Erro no worker de lembretes: {e}", exc_info=True)
-    except asyncio.CancelledError:
-        logger.info("🛑 worker_lembretes_agendamento cancelado")
-        raise
-
-
 async def monitorar_escolha_unidade(account_id: int, conversation_id: int, empresa_id: int):
     await asyncio.sleep(120)
     if not await redis_client.exists(f"esperando_unidade:{conversation_id}"):
@@ -2602,7 +2534,7 @@ async def monitorar_escolha_unidade(account_id: int, conversation_id: int, empre
     # Lembrete amigável — pergunta de novo sem listar todas as unidades
     await enviar_mensagem_chatwoot(
         account_id, conversation_id,
-        "Só pra eu não te perder de vista 😊\n\nQual unidade da barbearia fica mais perto de você?",
+        "Só pra eu não te perder de vista 😊\n\nQual cidade ou destino você está pensando para se hospedar?",
         _nome_ia_mon, integracao, empresa_id
     )
 
@@ -3322,7 +3254,7 @@ async def _coletar_metricas_unidade(empresa_id: int, unidade_id: int, hoje) -> D
         SELECT COUNT(*) FROM eventos_funil ef
         JOIN conversas c ON c.id = ef.conversa_id
         WHERE c.empresa_id = $1 AND c.unidade_id = $2
-          AND ef.tipo_evento IN ('matricula_realizada', 'servico_concluido')
+          AND ef.tipo_evento IN ('matricula_realizada', 'checkout_concluido')
           AND DATE(ef.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = $3
     """, empresa_id, unidade_id, hoje) or 0
 
@@ -3560,9 +3492,9 @@ async def worker_resumo_ia():
                         )
 
                         prompt = (
-                            "Analise a conversa abaixo entre um cliente e um atendente virtual de barbearia. "
+                            "Analise a conversa abaixo entre um potencial hóspede e um concierge virtual de hotel. "
                             "Responda em português com no máximo 3 frases cobrindo: "
-                            "1) o que o cliente quer, 2) nível de interesse (quente/morno/frio), "
+                            "1) o que o hóspede quer, 2) nível de interesse (quente/morno/frio), "
                             "3) próximo passo sugerido. Seja direto e objetivo.\n\n"
                             f"Conversa:\n{historico}"
                         )
@@ -3706,7 +3638,7 @@ async def enviar_aviso_fora_horario(account_id: int, conversation_id: int, integ
     if await redis_client.get(chave_aviso):
         return
     
-    mensagem = "Olá! 👋 Recebemos sua mensagem! No momento estamos fora do horário de atendimento, mas assim que retornarmos vamos te responder com prioridade. Obrigado pela compreensão! ✨"
+    mensagem = "Olá! 👋 No momento nossa IA está fora do horário de atendimento, mas sua mensagem foi recebida! Assim que voltarmos, responderemos com prioridade. Obrigado pela compreensão! ✨"
     try:
         await enviar_mensagem_chatwoot(account_id, conversation_id, mensagem, integracao, empresa_id)
         await redis_client.setex(chave_aviso, 3600, "1") # Silêncio de 1 hora para o mesmo aviso
@@ -3871,11 +3803,11 @@ async def processar_ia_e_responder(
         intencao = intencao_motor or (detectar_intencao(primeira_mensagem) if primeira_mensagem else None)
         _texto_cliente_norm = normalizar(texto_cliente_unificado or "")
         _intencao_compra = bool(re.search(
-            r"(vou querer|quero (esse|este|fechar|agendar|contratar|assinar)|manda(r)? (o )?link|pode mandar o link|poderia mandar o link|tenho interesse|gostei desse preco|gostei desse preço|vamos fechar|quero agendar|quero marcar|fazer agendamento)",
+            r"(vou querer|quero (esse|este|fechar|reservar|contratar|assinar)|manda(r)? (o )?link|pode mandar o link|poderia mandar o link|tenho interesse|gostei desse preco|gostei desse preço|vamos fechar|quero me hospedar|quero reservar|fazer reserva)",
             _texto_cliente_norm,
         ))
         _quer_todos_planos = bool(re.search(
-            r"(fora esse|alem dessa|além dessa|outra opcao|outras opcoes|outras opções|quais opcoes|todas as opcoes|opções de servico|saber dos servicos|quero ver opcoes|me fala dos servicos|outros planos|quais planos)",
+            r"(fora esse|alem dessa|além dessa|outra opcao|outras opcoes|outras opções|quais opcoes|todas as opcoes|opções de quarto|saber das tarifas|quero ver opcoes|me fala das tarifas|outros planos|quais planos)",
             _texto_cliente_norm,
         ))
         if planos_ativos and intencao in {"planos", "preco"}:
@@ -3886,227 +3818,6 @@ async def processar_ia_e_responder(
             elif re.search(r"(quero saber dos planos|quais planos|planos)" , _texto_cliente_norm):
                 fast_reply_lista = formatar_planos_bonito(planos_ativos, destacar_melhor_preco=True)
                 logger.info("⚡ Planos: envio completo em blocos para pedido genérico")
-
-        # ── Detecção de intenção de AGENDAMENTO ──
-        _intencao_agendar = bool(re.search(
-            r"(agendar|agendamento|agenda pra|agenda para|agenda ai|agenda aí|agenda la|agenda lá|"
-            r"marcar|marca um|marca pra|marca para|marca ai|marca aí|marca la|marca lá|"
-            r"horario disponivel|horário disponível|horarios disponiveis|horários disponíveis|"
-            r"quero cortar|quero um corte|cortar cabelo|cortar o cabelo|corta meu|"
-            r"fazer a barba|barba|corte de cabelo|preciso cortar|to precisando|tô precisando|"
-            r"tem horario|tem horário|tem vaga|vaga|disponibilidade|"
-            r"encaixe|encaixar|pode me encaixar|quando posso ir|que horas pode|que dia tem|"
-            r"remarcar|reagendar|cancelar meu horario|cancelar meu horário|cancelar agendamento|"
-            r"meu agendamento|meus agendamentos|meus horarios|meus horários|"
-            r"reserva|reservar|bota pra mim|coloca pra mim|quero ir|posso ir|"
-            r"pode ser|às \d|as \d|\d+h|\d+:\d+|sim\b|confirmo|confirma|esse horario|esse horário|"
-            r"esse mesmo|pode marcar|marca esse|quero esse|bora|fechado|fechou|"
-            r"amanha|amanhã|hoje|segunda|terca|terça|quarta|quinta|sexta|sabado|sábado|domingo)",
-            _texto_cliente_norm,
-        ))
-
-        # ── Persistir contexto de agendamento entre mensagens (10min TTL) ──
-        if _intencao_agendar:
-            await redis_client.setex(f"agendar_ctx:{conversation_id}", 600, "1")
-        else:
-            # Restaura contexto de agendamento de mensagens anteriores
-            _ctx_agendamento_prev = await redis_client.get(f"agendar_ctx:{conversation_id}")
-            if _ctx_agendamento_prev:
-                _intencao_agendar = True
-                logger.info(f"📅 Contexto de agendamento restaurado do Redis para conv {conversation_id}")
-
-        # ── SEMPRE carrega barbeiros + serviços (para info de preços etc.) ──
-        _contexto_agendamento = ""
-        _barbeiros = []
-        _servicos = []
-        if db_pool:
-            try:
-                from src.services.agendamento_service import (
-                    listar_barbeiros, listar_servicos,
-                )
-                _barbeiros = await listar_barbeiros(db_pool, empresa_id)
-                _servicos = await listar_servicos(db_pool, empresa_id)
-                if _barbeiros or _servicos:
-                    _contexto_agendamento = "\n\n[INFORMAÇÕES DO ESTABELECIMENTO]\n"
-                    if _barbeiros:
-                        _nomes_barb = ", ".join(b['nome'] for b in _barbeiros)
-                        _contexto_agendamento += f"Profissionais disponíveis: {_nomes_barb}\n"
-                    if _servicos:
-                        _srv_list = "; ".join(f"{s['nome']} ({s['duracao_minutos']}min, R${s['preco']:.2f})" if s.get('preco') else f"{s['nome']} ({s['duracao_minutos']}min)" for s in _servicos)
-                        _contexto_agendamento += f"Serviços: {_srv_list}\n"
-                    _contexto_agendamento += "\n2. PREÇOS: Use SOMENTE os preços listados nos Serviços acima. NUNCA invente preços.\n"
-                    _contexto_agendamento += "3. PROFISSIONAIS: Use SOMENTE os nomes listados em \"Profissionais disponíveis\" acima.\n"
-                    contexto_precarregado += _contexto_agendamento
-                    logger.info(f"💈 Contexto de serviços/barbeiros injetado para conv {conversation_id} | barbeiros={len(_barbeiros)} servicos={len(_servicos)}")
-            except Exception as e:
-                logger.error(f"Erro ao carregar barbeiros/serviços: {e}")
-
-        # ── Só carrega disponibilidade detalhada quando intenção de agendamento detectada ──
-        if _intencao_agendar and db_pool:
-            try:
-                from src.services.agendamento_service import (
-                    obter_proximos_dias_disponiveis, parse_data_texto,
-                    formatar_disponibilidade_para_ia, buscar_agendamentos_cliente,
-                )
-
-                # Tenta extrair data do texto do cliente
-                _data_pedida = parse_data_texto(texto_cliente_unificado or "")
-
-                if _data_pedida:
-                    _disp = await formatar_disponibilidade_para_ia(db_pool, empresa_id, _data_pedida)
-                else:
-                    _disp = await obter_proximos_dias_disponiveis(db_pool, empresa_id)
-
-                # Busca agendamentos existentes do cliente
-                _fone_cli = await redis_client.get(f"fone_cliente:{conversation_id}")
-                _agendamentos_cli = []
-                if _fone_cli:
-                    _fone_limpo = "".join(filter(str.isdigit, str(_fone_cli)))
-                    _agendamentos_cli = await buscar_agendamentos_cliente(db_pool, empresa_id, _fone_limpo)
-
-                _contexto_disp = "\n\n[DADOS DE AGENDAMENTO — USE PARA RESPONDER]\n"
-                _contexto_disp += f"\n{_disp}\n"
-                if _agendamentos_cli:
-                    _ag_list = "\n".join(
-                        f"  • {a['data_hora'].strftime('%d/%m %H:%M')} com {a.get('barbeiro_nome', '?')} ({a.get('servico_nome', 'corte')})"
-                        for a in _agendamentos_cli
-                    )
-                    _contexto_disp += f"\nAgendamentos futuros deste cliente:\n{_ag_list}\n"
-                else:
-                    _contexto_disp += "\nEste cliente NÃO tem agendamentos futuros.\n"
-
-                _contexto_disp += """
-⚠️⚠️⚠️ REGRAS DE AGENDAMENTO — OBRIGATÓRIO — SIGA À RISCA:
-
-1. DISPONIBILIDADE: Olhe os dados "Dias com vagas" acima.
-   - Se NÃO há horários, diga isso. NÃO INVENTE vagas.
-   - Se o dia pedido NÃO está listado, sugira os dias que TÊM vaga.
-
-2. PREÇOS: Use SOMENTE os preços listados nos Serviços. NUNCA invente.
-
-3. PROFISSIONAIS: Use SOMENTE os nomes listados acima.
-
-4. ⚠️⚠️⚠️ FLUXO OBRIGATÓRIO DE AGENDAMENTO — NUNCA PULE ETAPAS:
-   Você PRECISA coletar TODOS estes dados ANTES de confirmar:
-   a) DIA — qual dia o cliente quer
-   b) HORÁRIO EXATO — ex: 08:00, 09:00, 10:00 (NUNCA confirme sem horário específico!)
-   c) PROFISSIONAL — se houver mais de 1, pergunte qual
-   d) SERVIÇO — qual serviço
-
-   ❌ PROIBIDO: Confirmar agendamento dizendo apenas "amanhã" sem horário.
-   ❌ PROIBIDO: Dizer "Agendado para amanhã" sem ter perguntado e recebido o HORÁRIO EXATO.
-   ✅ CORRETO: "Para qual horário? Temos 08:00, 09:00 e 10:00 disponíveis."
-   ✅ CORRETO: Só confirmar quando tiver DIA + HORA + BARBEIRO.
-
-   Se o cliente escolher o barbeiro mas NÃO o horário, PERGUNTE: "Qual horário prefere? Temos X, Y e Z."
-   Se o cliente disser "amanhã com o Gui", PERGUNTE: "Ótimo! Para qual horário? Temos 08:00, 09:00 e 10:00."
-
-5. ⚠️⚠️⚠️ TAG OBRIGATÓRIA — SEM ESSA TAG O AGENDAMENTO NÃO É CRIADO:
-   SOMENTE quando tiver DIA + HORÁRIO + BARBEIRO + SERVIÇO definidos E o cliente confirmar,
-   inclua a tag abaixo NO FINAL da sua resposta:
-   <AGENDAR:nome_barbeiro|YYYY-MM-DD HH:MM|nome_servico>
-   Exemplo: <AGENDAR:Gui|2026-04-09 09:00|Corte masculino>
-
-   ⚠️ REPITO: Você DEVE incluir essa tag. Sem ela o sistema NÃO cria o agendamento.
-   ⚠️ A tag NÃO aparece para o cliente, é processada internamente.
-
-6. Para CANCELAR: use <CANCELAR_AGENDAMENTO:id_do_agendamento>
-
-7. 🧑 PERSONA DO CLIENTE — Se durante a conversa você perceber algo relevante sobre o perfil/personalidade do cliente
-   (ex: é comunicativo, objetivo, exigente, tranquilo, tímido, engraçado, tem preferência por algo específico),
-   inclua a tag NO FINAL da sua resposta:
-   <PERSONA:tipo|observação>
-   Tipos válidos: persona, preferencia, historico
-   Exemplos:
-   <PERSONA:persona|Cliente descontraído e comunicativo, gosta de puxar assunto>
-   <PERSONA:persona|Cliente objetivo e direto, prefere atendimento rápido>
-   <PERSONA:preferencia|Prefere corte degradê com navalha>
-   <PERSONA:preferencia|Sempre pede para não tirar muito do topo>
-   <PERSONA:historico|Cliente fiel, vem toda semana>
-   ⚠️ Só use essa tag quando identificar algo RELEVANTE. Não force. A tag NÃO aparece para o cliente.
-"""
-                contexto_precarregado += _contexto_disp
-                logger.info(f"💈 Contexto de disponibilidade injetado para conv {conversation_id} | disp={_disp[:100]}")
-            except Exception as e:
-                logger.error(f"Erro ao carregar contexto de agendamento: {e}")
-
-        # ── UPSELL: verificar se há sugestão pendente para injetar no contexto ──
-        _upsell_ctx = await redis_client.get(f"upsell_pendente:{conversation_id}")
-        if _upsell_ctx:
-            try:
-                import json as _json_up_ctx
-                _upsell_data = _json_up_ctx.loads(_upsell_ctx)
-                _sug_list = _upsell_data.get('sugestoes', [])
-                if _sug_list:
-                    _upsell_texto = "\n\n[OPORTUNIDADE DE VENDA — SUGIRA AO CLIENTE]\n"
-                    _upsell_texto += f"O horário após o agendamento (a partir das {_upsell_data['horario_livre_apos']}) está LIVRE.\n"
-                    _upsell_texto += "Serviços adicionais que você pode sugerir:\n"
-                    for _s_up in _sug_list[:3]:
-                        _upsell_texto += f"• {_s_up['servico_nome']}: de R${_s_up['preco_original']:.2f} por R${_s_up['preco_desconto']:.2f} ({_s_up['desconto_percent']}% de desconto!) — {_s_up['duracao_minutos']}min\n"
-                    _upsell_texto += "\n⚠️ REGRA: Sugira de forma NATURAL e SEM PRESSÃO. Ex: 'Aproveitando que você já vai estar aqui, que tal fazer a barba também? Temos um desconto especial de X%!'\n"
-                    _upsell_texto += "Se o cliente aceitar, agende normalmente no horário livre.\n"
-                    _upsell_texto += "Se recusar, respeite e NÃO insista.\n"
-                    contexto_precarregado += _upsell_texto
-                    logger.info(f"💰 [UPSELL] Contexto injetado para conv {conversation_id}: {len(_sug_list)} sugestões")
-                # Limpa o upsell do Redis (já injetou)
-                await redis_client.delete(f"upsell_pendente:{conversation_id}")
-            except Exception as _up_ctx_err:
-                logger.warning(f"⚠️ [UPSELL] Erro ao injetar contexto: {_up_ctx_err}")
-
-        # ── MEMÓRIA / PERSONA DO CLIENTE ──
-        try:
-            _fone_mem = await redis_client.get(f"fone_cliente:{conversation_id}")
-            if _fone_mem and db_pool:
-                _fone_mem_limpo = "".join(filter(str.isdigit, str(_fone_mem)))
-                if _fone_mem_limpo:
-                    _memorias_rows = await db_pool.fetch(
-                        """SELECT tipo, conteudo FROM memoria_cliente
-                           WHERE contato_fone = $1 AND empresa_id = $2
-                           ORDER BY relevancia DESC, updated_at DESC
-                           LIMIT 10""",
-                        _fone_mem_limpo, empresa_id
-                    )
-                    if _memorias_rows:
-                        _emoji_map = {"preferencia": "⭐", "objetivo": "🎯", "restricao": "⚠️", "historico": "📋", "persona": "🧑"}
-                        _mem_linhas = []
-                        for _mr in _memorias_rows:
-                            _em = _emoji_map.get(_mr["tipo"], "📌")
-                            _mem_linhas.append(f"{_em} [{_mr['tipo'].upper()}] {_mr['conteudo']}")
-                        contexto_precarregado += "\n\n[MEMÓRIA DO CLIENTE — informações de conversas anteriores]\n" + "\n".join(_mem_linhas)
-                        logger.info(f"🧠 Memória do cliente injetada para conv {conversation_id}: {len(_memorias_rows)} registros")
-        except Exception as _mem_err:
-            logger.warning(f"⚠️ Erro ao carregar memória do cliente: {_mem_err}")
-
-        # ── Detecção de AVALIAÇÃO (resposta numérica 1-5 após corte) ──
-        if db_pool and primeira_mensagem and re.match(r'^[1-5]$', (primeira_mensagem or "").strip()):
-            _fone_aval = await redis_client.get(f"fone_cliente:{conversation_id}")
-            if _fone_aval:
-                _fone_aval_limpo = "".join(filter(str.isdigit, str(_fone_aval)))
-                _aval_data = await redis_client.get(f"aguardando_avaliacao:{_fone_aval_limpo}")
-                if _aval_data:
-                    try:
-                        from src.services.agendamento_service import salvar_avaliacao
-                        _parts = _aval_data.split(":")
-                        _ag_id, _barb_id, _emp_id = int(_parts[0]), int(_parts[1]), int(_parts[2])
-                        _nota = int(primeira_mensagem.strip())
-                        await salvar_avaliacao(db_pool, _ag_id, _emp_id, _barb_id, _nota, cliente_telefone=_fone_aval_limpo)
-                        await redis_client.delete(f"aguardando_avaliacao:{_fone_aval_limpo}")
-                        # Use configurable template if available
-                        _msg_templates = {}
-                        try:
-                            _pers_row = await db_pool.fetchrow(
-                                "SELECT msg_avaliacao_obrigado FROM personalidade_ia WHERE empresa_id = $1 LIMIT 1",
-                                _emp_id
-                            )
-                            if _pers_row and _pers_row.get("msg_avaliacao_obrigado"):
-                                _msg_templates["msg_avaliacao_obrigado"] = _pers_row["msg_avaliacao_obrigado"]
-                        except Exception:
-                            pass
-                        from src.services.agendamento_service import formatar_avaliacao_obrigado
-                        fast_reply = formatar_avaliacao_obrigado(_nota, templates=_msg_templates)
-                        logger.info(f"⭐ Avaliação {_nota}/5 salva para agendamento {_ag_id}")
-                    except Exception as e:
-                        logger.error(f"Erro ao salvar avaliação: {e}")
 
         _intencoes_cacheaveis = {
             "horario", "endereco"
@@ -4133,7 +3844,7 @@ async def processar_ia_e_responder(
             _cache_sem = await buscar_cache_semantico(primeira_mensagem, slug)
 
         # Bypass cache se cliente pede tour/vídeo e a unidade tem tour disponível
-        _pede_tour = any(k in normalizar(primeira_mensagem or "") for k in ("tour", "video", "ver por dentro", "mostrar a barbearia", "conhecer a unidade", "conhecer a barbearia", "ver a barbearia"))
+        _pede_tour = any(k in normalizar(primeira_mensagem or "") for k in ("tour", "video", "ver por dentro", "mostrar o hotel", "conhecer a unidade", "conhecer o hotel", "ver o hotel"))
         _tem_tour = bool(unidade.get("link_tour_virtual"))
         if _pede_tour and _tem_tour:
             resposta_cacheada = None
@@ -4204,8 +3915,8 @@ Cidade/Estado: {unidade.get('cidade') or 'não informado'} / {unidade.get('estad
 Telefone: {tel_banco or 'não informado'}
 Horários:
 {horarios_str}
-Link de Agendamento: {unidade.get('link_matricula') or 'não disponível'}
-Serviços & Preços:
+Link de Reserva / Booking: {unidade.get('link_matricula') or 'não disponível'}
+Tarifas & Acomodações:
 {planos_detalhados}
 Site: {unidade.get('site') or 'não informado'}
 Instagram: {unidade.get('instagram') or 'não informado'}
@@ -4219,15 +3930,7 @@ Tour Virtual: {'vídeo disponível' if unidade.get('link_tour_virtual') else 'n�
             # ── Campos conhecidos da personalidade_ia ──────────────────────────
             tom_voz          = pers.get('tom_voz') or 'Profissional, claro e prestativo'
             estilo           = pers.get('estilo_comunicacao') or ''
-            # Saudação inteligente baseada no horário
-            _hora_atual = datetime.now(ZoneInfo('America/Sao_Paulo')).hour
-            if _hora_atual < 12:
-                _saudacao_periodo = "Bom dia"
-            elif _hora_atual < 18:
-                _saudacao_periodo = "Boa tarde"
-            else:
-                _saudacao_periodo = "Boa noite"
-            saudacao         = pers.get('saudacao_personalizada') or f"{_saudacao_periodo}! Sou {nome_ia}, como posso te ajudar? 😊"
+            saudacao         = pers.get('saudacao_personalizada') or f"Olá! Sou {nome_ia}, como posso ajudar?"
             instrucoes_base  = pers.get('instrucoes_base') or "Atenda o cliente de forma educada."
             regras_atend     = pers.get('regras_atendimento') or "Seja breve e objetivo."
 
@@ -4306,22 +4009,14 @@ NUNCA use inglês ou qualquer outro idioma — nem uma palavra, nem no meio de f
 NUNCA avalie respostas com frases como "is perfect", "that's great", "perfect answer" ou similares.
 Você é um atendente — apenas responda o cliente diretamente.
 
-Seu nome é {nome_ia}. Você é atendente virtual de {nome_empresa}.
-Você é um PROFISSIONAL DE ATENDIMENTO DE EXCELÊNCIA — não um chatbot genérico. Suas respostas devem transmitir profissionalismo, conhecimento do negócio e cuidado genuíno com o cliente.
-REGRAS DE INTELIGÊNCIA CONVERSACIONAL:
-- Se o cliente perguntar algo que você já respondeu no histórico, NÃO repita a mesma resposta — reconheça que já falou sobre isso e ofereça um ângulo novo ou pergunte se quer mais detalhes.
-- Se o cliente demonstrar frustração ou insatisfação, mude imediatamente o tom para empático e solucionador. Use frases como "Entendo sua preocupação" e ofereça alternativas concretas.
-- Se o cliente fizer uma pergunta fora do escopo do negócio, ajude com conhecimento geral se possível — um bom atendente faria isso.
-- NUNCA responda com listas enormes. Selecione as 2-3 informações mais relevantes para o contexto.
-- Se detectar que o cliente está comparando preços ou hesitando, destaque os DIFERENCIAIS sem ser insistente.
-- Se o contexto incluir DADOS DE AGENDAMENTO, use-os para ajudar o cliente a marcar horário. Guie o cliente pelo processo de forma natural e amigável.
+Seu nome é {nome_ia}. Você é concierge virtual do hotel {nome_empresa}.
 IMPORTANTE: NUNCA diga que vai "enviar um áudio", "mandar um áudio" ou "responder por áudio". O sistema de áudio é automático — você só precisa responder a pergunta normalmente. Se o cliente pedir áudio, responda a pergunta dele diretamente sem mencionar áudio.
 """
             if slug:
-                prompt_sistema += f"Você está atendendo agora pela unidade: {nome_unidade}.\n"
-                prompt_sistema += "Se o cliente perguntar sobre OUTRA unidade da rede, responda normalmente usando as informações que você tem. Não diga que 'não pode' falar de outra unidade.\n"
+                prompt_sistema += f"Você está atendendo agora pela unidade/propriedade: {nome_unidade}.\n"
+                prompt_sistema += "Se o hóspede perguntar sobre OUTRA unidade da rede, responda normalmente usando as informações que você tem. Não diga que 'não pode' falar de outra unidade.\n"
             else:
-                prompt_sistema += f"Você é atendente virtual de {nome_empresa}. Você atende todas as unidades. Quando o cliente não especificar uma unidade, pergunte qual unidade ele prefere.\n"
+                prompt_sistema += f"Você é concierge virtual da rede {nome_empresa}. Você atende todas as propriedades da rede. Quando o hóspede não especificar uma unidade, pergunte qual das nossas propriedades ele gostaria de conhecer.\n"
 
             _foto_grade = unidade.get("foto_grade")
             _modalidades_texto = unidade.get("modalidades") or ""
@@ -4329,9 +4024,9 @@ IMPORTANTE: NUNCA diga que vai "enviar um áudio", "mandar um áudio" ou "respon
                 prompt_sistema += "\n[SERVIÇOS & COMODIDADES — REGRAS]\n"
                 if _modalidades_texto:
                     prompt_sistema += "Você TEM acesso ao conteúdo textual completo dos serviços e comodidades desta propriedade. Os dados estão no campo 'Modalidades/Serviços' nos DADOS DA UNIDADE.\n"
-                    prompt_sistema += "REGRA PRIORITÁRIA: Sempre responda sobre serviços, cortes, barba e estrutura usando o TEXTO que você já possui. Explique verbalmente.\n"
-                    prompt_sistema += "Se o cliente perguntar sobre um serviço específico (ex: corte, barba, sobrancelha), busque nos dados textuais e responda com as informações que tem.\n"
-                    prompt_sistema += "Se o cliente não consegue ler, tem dificuldade visual, ou pediu por áudio — NUNCA ofereça imagem. Use o texto para explicar verbalmente.\n"
+                    prompt_sistema += "REGRA PRIORITÁRIA: Sempre responda sobre serviços, acomodações, restaurante, piscina e estrutura usando o TEXTO que você já possui. Explique verbalmente.\n"
+                    prompt_sistema += "Se o hóspede perguntar sobre um serviço específico (ex: spa, café da manhã, piscina), busque nos dados textuais e responda com as informações que tem.\n"
+                    prompt_sistema += "Se o hóspede não consegue ler, tem dificuldade visual, ou pediu por áudio — NUNCA ofereça imagem. Use o texto para explicar verbalmente.\n"
                 if _foto_grade:
                     prompt_sistema += "Esta propriedade também TEM uma imagem da estrutura/cardápio disponível.\n"
                     prompt_sistema += "A imagem é um COMPLEMENTO — ofereça APÓS já ter respondido com o texto. Exemplo: 'E se quiser ver nossa estrutura completa, posso te enviar a foto também!'\n"
@@ -4368,7 +4063,7 @@ IMPORTANTE: NUNCA diga que vai "enviar um áudio", "mandar um áudio" ou "respon
                         prompt_sistema += """
 [TOUR VIRTUAL — MODO REATIVO]
 Esta propriedade possui um vídeo de Tour Virtual disponível.
-- SOMENTE envie o tour se o cliente PEDIR explicitamente para ver o tour, vídeo, ou conhecer por dentro.
+- SOMENTE envie o tour se o hóspede PEDIR explicitamente para ver o hotel, tour, vídeo, ou conhecer por dentro.
 - NÃO ofereça espontaneamente.
 - Para enviar: adicione <SEND_VIDEO> no final da sua resposta.
 """
@@ -4378,11 +4073,11 @@ Esta propriedade possui um vídeo de Tour Virtual disponível.
 Esta propriedade possui um vídeo de Tour Virtual disponível.
 
 REGRA OBRIGATÓRIA DE ENVIO:
-- Se o cliente PEDIR para ver o tour, vídeo, conhecer a barbearia por dentro → ENVIE IMEDIATAMENTE adicionando <SEND_VIDEO> no final da resposta.
+- Se o hóspede PEDIR para ver o tour, vídeo, conhecer o hotel por dentro → ENVIE IMEDIATAMENTE adicionando <SEND_VIDEO> no final da resposta.
 - Se demonstrar interesse mas NÃO pediu explicitamente → ofereça primeiro. Quando aceitar, use <SEND_VIDEO>.
 
-OFERECIMENTO PROATIVO (este contato é um potencial cliente):
-1. Se demonstrar interesse na barbearia, ofereça o tour.
+OFERECIMENTO PROATIVO (este contato é um potencial hóspede):
+1. Se demonstrar interesse na propriedade, ofereça o tour.
 2. Após 2-3 mensagens de rapport, ofereça naturalmente se ainda não ofereceu.
 3. NÃO ofereça mais de uma vez. Se recusou, não insista.
 
@@ -4418,8 +4113,8 @@ Se o cliente PEDIR para ver → envie imediatamente com <SEND_VIDEO>.
 NÃO ofereça mais de uma vez.
 """
                     elif not _eh_lead and _estrategia_tour != "off":
-                        # Cliente/Parceiro: modo reativo independente da estratégia
-                        prompt_sistema += "\n[TOUR VIRTUAL]: Esta propriedade tem tour virtual. Se o cliente pedir para ver, adicione <SEND_VIDEO> no final da resposta.\n"
+                        # Hóspede/Parceiro: modo reativo independente da estratégia
+                        prompt_sistema += "\n[TOUR VIRTUAL]: Esta propriedade tem tour virtual. Se o hóspede pedir para ver, adicione <SEND_VIDEO> no final da resposta.\n"
 
             prompt_sistema += f"""
 PERSONALIDADE
@@ -4455,7 +4150,7 @@ REGRAS CRÍTICAS — ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
 - Use EXCLUSIVAMENTE as informações presentes em "INFORMAÇÕES DA UNIDADE" acima.
 - Se um campo estiver como "não informado" ou "não disponível", diga que não tem essa informação agora e que vai verificar com a equipe.
 - NUNCA invente endereços, telefones, horários, links, planos, preços ou qualquer dado não informado.
-- NUNCA ofereça ou prometa algo que NÃO esteja nos dados acima (promoções, descontos, benefícios, serviços extras, etc).
+- NUNCA ofereça ou prometa algo que NÃO esteja nos dados acima (promoções, descontos, benefícios, diárias, aulas experimentais, etc).
 - NUNCA diga que a empresa tem "apenas uma unidade" — você não tem essa informação completa.
 - Se a pergunta do cliente bater com algum item do FAQ acima, USE aquela resposta como base.
 - Se "Link de Matrícula / LP" estiver disponível com URL (http), ENVIE O LINK IMEDIATAMENTE na resposta. NÃO peça dados pessoais antes. NÃO diga "vou buscar" ou "estou validando". Exemplo: "Dá uma olhada nos nossos planos aqui: [link]"
@@ -4465,26 +4160,19 @@ REGRAS CRÍTICAS — ANTI-ALUCINAÇÃO (OBRIGATÓRIO):
 - Você PODE perguntar o primeiro nome do cliente de forma natural (ex: "E qual seu nome?" ou "Com quem eu falo?"). Mas NUNCA peça outros dados pessoais (CPF, email, endereço, telefone, RG, data de nascimento). Você é um vendedor, NÃO um formulário.
 - NUNCA diga "vou pedir para um consultor te chamar" ou "vou encaminhar para um consultor" — responda com as informações que você tem ou direcione para o link.
 
-FLUXO DE ATENDIMENTO REAL (OBRIGATÓRIO):
-Você é um ATENDENTE de barbearia, não um robô de FAQ. Siga este fluxo:
-1. Responda a pergunta do cliente de forma direta e curta
+FLUXO DE CONCIERGE REAL (OBRIGATÓRIO):
+Você é um CONCIERGE, não um robô de FAQ. Siga este fluxo:
+1. Responda a pergunta do hóspede de forma direta e curta
 2. Depois da resposta, faça UMA pergunta de descoberta que avança a conversa
 Exemplos:
-  Cliente: "Tem horário disponível?" → "Temos sim! Nossos cortes a partir de R$50 😊 Qual dia e horário ficam melhor para você?"
-  Cliente: "Qual o horário de atendimento?" → "Nosso horário é das 9h às 20h ✅ Quer agendar um horário?"
-  Cliente: "Quanto custa?" → "Nossos serviços a partir de R$50! Você procura corte, barba ou combo?"
+  Hóspede: "Tem disponibilidade?" → "Temos sim! Nossas diárias partem de R$350 😊 Você está planejando para quantas noites?"
+  Hóspede: "Qual o horário do check-in?" → "Nosso check-in é a partir das 14h e check-out até as 12h ✅ Já tem uma data em mente?"
+  Hóspede: "Quanto custa?" → "Nossas tarifas partem de R$350/noite! Você prefere suite standard, superior ou nossa suíte premium?"
 REGRAS do fluxo:
 - Resposta + pergunta na MESMA mensagem, sempre
-- A pergunta deve descobrir algo sobre o cliente (dia, horário, tipo de serviço, barbeiro preferido)
-- NUNCA adicione dados que o cliente NÃO pediu (ex: não jogue horários se pediu preço)
-- Se o cliente já respondeu uma descoberta, avance para a próxima etapa (confirmar agendamento, enviar link)
-
-INTELIGÊNCIA DE CONTEXTO (OBRIGATÓRIO):
-- Se o cliente mencionar uma OCASIÃO ESPECIAL (casamento, formatura, evento), adapte suas sugestões para essa ocasião.
-- Se o cliente perguntar sobre HORÁRIOS fora do padrão, informe o horário oficial mas ofereça verificar flexibilidade com a equipe.
-- Se o cliente perguntar sobre ACESSIBILIDADE ou NECESSIDADES ESPECIAIS, responda com empatia e as informações disponíveis.
-- Se o cliente enviar apenas "ok", "blz", "beleza", "tá bom" ou similar, NÃO repita informações — pergunte se precisa de algo mais ou deseje um bom atendimento.
-- Se o cliente enviar APENAS emojis (👍, ❤️, etc.), responda brevemente com "Que bom! Precisa de mais alguma coisa? 😊"
+- A pergunta deve descobrir algo sobre o hóspede (datas, número de pessoas, tipo de quarto)
+- NUNCA adicione dados que o hóspede NÃO pediu (ex: não jogue horários se pediu preço)
+- Se o hóspede já respondeu uma descoberta, avance para a próxima etapa (confirmar reserva, enviar link)
 
 REGRAS DE TOM (OBRIGATÓRIO):
 - NUNCA comece resposta com "Olá" se já houve troca de mensagens — vá direto ao ponto
@@ -4525,11 +4213,11 @@ REGRAS DE TOM:
 - NUNCA comece com "Olá" se a conversa já começou — vá direto ao ponto
 
 EXEMPLO DE MENSAGEM BEM FORMATADA:
-"Temos sim! Nosso *corte masculino* a partir de *R$50* 😊
+"Temos sim! Nossa diária no *quarto standard* parte de *R$350* 😊
 
-Atendemos das 9h às 20h — e temos estacionamento gratuito!
+Check-in a partir das 14h, check-out até as 12h — e o café da manhã já está incluso!
 
-Qual dia e horário ficam melhor pra você?"
+Você está pensando para quais datas?"
 {aviso_mudanca}
 
 DADOS DO ATENDIMENTO:
@@ -4586,8 +4274,8 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 # Resposta de fallback quando LLM está indisponível
                 _nome_cb = nome_cliente.split()[0].capitalize() if nome_cliente else "você"
                 resposta_texto = (
-                    f"Oi, {_nome_cb}! 😊 Me dá um minutinho que já te atendo!\n\n"
-                    "Pode repetir sua pergunta? Quero te ajudar da melhor forma 💛"
+                    f"Olá, {_nome_cb}! 😊 Estou com uma lentidão no momento.\n\n"
+                    "Pode me repetir sua dúvida em instantes? Já vou te atender! 💪"
                 )
                 novo_estado = estado_atual
                 # Pula o bloco IA e vai direto para envio
@@ -4649,7 +4337,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                             logger.error(f"❌ Timeout no fallback também. Conv {conversation_id}")
                             await cb_llm.record_failure()
                             resposta_bruta = json.dumps({
-                                "resposta": "Opa, me dá um instante que estou buscando as informações para você! Pode repetir sua pergunta? 😊",
+                                "resposta": "Estou com uma lentidão agora 😕 Pode tentar novamente em instantes?",
                                 "estado": estado_atual
                             })
                         except Exception as e2:
@@ -4660,7 +4348,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                 logger.error("❌ Erro no fallback")
                             await cb_llm.record_failure()
                             resposta_bruta = json.dumps({
-                                "resposta": "Estou verificando algumas informações aqui. Pode me mandar sua pergunta de novo? 😊",
+                                "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
                                 "estado": estado_atual
                             })
 
@@ -4683,7 +4371,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                         if erro_provedor:
                             await redis_client.setex(llm_provider_pause_key, 30, "1")
                             resposta_bruta = json.dumps({
-                                "resposta": "Estou com uma lentidão momentânea no sistema, mas já volto! Pode repetir o que precisa? 💛",
+                                "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
                                 "estado": estado_atual
                             })
                         else:
@@ -4700,7 +4388,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     logger.error("❌ Fallback também falhou")
                                 await cb_llm.record_failure()
                                 resposta_bruta = json.dumps({
-                                    "resposta": "Desculpe a demora! O sistema está se recuperando. Pode mandar sua dúvida de novo que te ajudo! 😊",
+                                    "resposta": "Estamos com alto volume de atendimentos agora 😕 Pode tentar novamente em instantes?",
                                     "estado": estado_atual
                                 })
 
@@ -4754,58 +4442,39 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 if _tags_midia:
                     resposta_texto = resposta_texto + ' ' + ' '.join(_tags_midia)
 
-                # Inferir estado emocional a partir do contexto completo (mensagem do cliente + resposta)
+                # Inferir estado emocional a partir das palavras-chave da resposta
                 _resp_norm = normalizar(resposta_texto)
-                _cli_norm = normalizar(texto_cliente_unificado or "")
-
-                # Detectar frustração/insatisfação do CLIENTE (prioridade alta)
-                if any(w in _cli_norm for w in ("reclamacao", "reclamação", "absurdo", "pessimo", "péssimo", "horrivel", "horrível", "nunca mais", "decepcionado", "decepção", "insatisfeito", "raiva", "indignado", "pior", "lixo", "vergonha")):
-                    novo_estado = "frustrado"
-                elif any(w in _cli_norm for w in ("demora", "demorado", "lento", "nao funciona", "não funciona", "problema", "erro", "bug", "nao consigo", "não consigo")):
-                    novo_estado = "insatisfeito"
-                # Detectar intenção de compra/conversão
-                elif any(w in _cli_norm for w in ("agendamento", "agendar", "quero fechar", "vou querer", "manda o link", "quero contratar", "tenho interesse", "vamos fechar", "quero marcar", "fazer agendamento", "quero agendar")):
+                if any(w in _resp_norm for w in ("reserva", "reservar", "check-in", "checkout", "diaria", "plano", "tarifas", "comecar agora", "matricula", "matricular")):
                     novo_estado = "conversao"
-                elif any(w in _resp_norm for w in ("agendamento", "agendar", "horario", "servico", "plano", "servicos", "comecar agora", "matricula", "matricular")):
-                    novo_estado = "conversao"
-                # Detectar entusiasmo
-                elif any(w in _cli_norm for w in ("adorei", "perfeito", "maravilhoso", "incrivel", "amei", "show", "top", "massa", "sensacional", "excelente", "otimo", "ótimo")):
-                    novo_estado = "animado"
                 elif any(w in _resp_norm for w in ("parabens", "que otimo", "incrivel", "adorei", "perfeito")):
                     novo_estado = "animado"
-                # Detectar hesitação
-                elif any(w in _cli_norm for w in ("caro", "muito caro", "nao sei", "não sei", "vou pensar", "vou ver", "depois eu vejo", "talvez", "sera que", "será que", "to em duvida", "estou em dúvida")):
-                    novo_estado = "hesitante"
                 elif any(w in _resp_norm for w in ("entendo", "compreendo", "preocupo", "problema", "dificuldade")):
                     novo_estado = "hesitante"
-                # Detectar interesse ativo
-                elif any(w in _cli_norm for w in ("interessado", "quero saber", "me conta", "me fala", "como funciona", "tem disponibilidade", "quanto custa", "qual o valor", "qual o preco", "qual o preço")):
-                    novo_estado = "interessado"
                 elif any(w in _resp_norm for w in ("interesse", "quero saber", "me conta", "curioso")):
                     novo_estado = "interessado"
                 else:
                     novo_estado = estado_atual
 
                 if not resposta_texto:
-                    resposta_texto = "Hmm, não entendi bem sua pergunta. Pode reformular? Estou aqui para te ajudar! 😊"
+                    resposta_texto = "Desculpe, pode repetir sua pergunta? 😊"
                     novo_estado = estado_atual
 
-                # Pós-processamento de conversão: se o cliente já sinalizou interesse em agendar,
-                # garante envio do link de agendamento e CTA de outras opções na mesma resposta.
+                # Pós-processamento de conversão: se o hóspede já sinalizou interesse em reservar,
+                # garante envio do link de reserva e CTA de outras opções na mesma resposta.
                 if _intencao_compra and link_plano:
                     _resp_norm_compra = normalizar(resposta_texto or "")
                     _tem_link = ("http://" in (resposta_texto or "")) or ("https://" in (resposta_texto or ""))
                     if not _tem_link:
-                        _base = resposta_texto.strip() if resposta_texto and resposta_texto.strip() else "Perfeito! Vamos garantir seu agendamento agora 🚀"
+                        _base = resposta_texto.strip() if resposta_texto and resposta_texto.strip() else "Perfeito! Vamos garantir sua reserva agora 🚀"
                         resposta_texto = (
                             f"{_base}\n\n"
-                            f"🔗 Para garantir seu agendamento agora: {link_plano}\n\n"
-                            "Se quiser, também te mostro *outras opções de serviço* para você comparar!"
+                            f"🔗 Para garantir sua reserva agora: {link_plano}\n\n"
+                            "Se quiser, também te mostro *outras opções de acomodação* para você comparar!"
                         )
                     elif "outras opções" not in _resp_norm_compra:
                         resposta_texto = (
                             f"{resposta_texto.rstrip()}\n\n"
-                            "Se quiser, também te mostro *outras opções de serviço* para você comparar!"
+                            "Se quiser, também te mostro *outras opções de acomodação* para você comparar!"
                         )
                     novo_estado = "conversao"
 
@@ -4824,7 +4493,7 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                             ttl=3600
                         )
 
-                if link_plano in resposta_texto or "agendar" in resposta_texto.lower() or "matricular" in resposta_texto.lower():
+                if link_plano in resposta_texto or "reservar" in resposta_texto.lower() or "matricular" in resposta_texto.lower():
                     await bd_registrar_evento_funil(
                         conversation_id, "link_matricula_enviado", "Link enviado via IA", score_incremento=2
                     )
@@ -4844,344 +4513,6 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 _enviar_tour = True
             else:
                 logger.warning(f"⚠️ [Tour] IA usou <SEND_VIDEO> mas unidade não tem link_tour_virtual!")
-
-        # --- Handler de AGENDAMENTO automático via tag <AGENDAR:...> ---
-        # Tenta múltiplas variações da tag (IA pode gerar com espaços, aspas, etc.)
-        _agendar_match = (
-            re.search(r'<AGENDAR:\s*([^|]+)\|([^|]+)\|([^>]+)>', resposta_texto or '') or
-            re.search(r'\[AGENDAR:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', resposta_texto or '') or
-            re.search(r'AGENDAR:\s*([^|]+)\|([^|]+)\|([^\s>)\]]+)', resposta_texto or '')
-        )
-        if _agendar_match and db_pool:
-            resposta_texto = re.sub(r'[\[<]?AGENDAR:[^>\]]*[>\]]?', '', resposta_texto).strip()
-            logger.info(f"📅 [AGENDAR] Tag detectada para conv {conversation_id}: barb='{_agendar_match.group(1)}' data='{_agendar_match.group(2)}' serv='{_agendar_match.group(3)}'")
-            try:
-                from src.services.agendamento_service import (
-                    criar_agendamento, buscar_barbeiro_por_nome, buscar_servico_por_nome,
-                    formatar_agendamento_confirmacao,
-                )
-                _barb_nome = _agendar_match.group(1).strip()
-                _data_str = _agendar_match.group(2).strip()
-                _serv_nome = _agendar_match.group(3).strip()
-
-                _barb = await buscar_barbeiro_por_nome(db_pool, empresa_id, _barb_nome)
-                _serv = await buscar_servico_por_nome(db_pool, empresa_id, _serv_nome)
-
-                # Tenta múltiplos formatos de data
-                _data_hora = None
-                for _fmt in ["%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
-                    try:
-                        _data_hora = datetime.strptime(_data_str, _fmt)
-                        break
-                    except ValueError:
-                        continue
-                if not _data_hora:
-                    logger.error(f"❌ [AGENDAR] Formato de data inválido: '{_data_str}'")
-
-                _fone_ag = await redis_client.get(f"fone_cliente:{conversation_id}")
-                _fone_ag_limpo = "".join(filter(str.isdigit, str(_fone_ag))) if _fone_ag else ""
-
-                if _barb and _data_hora:
-                    _ag = await criar_agendamento(
-                        db_pool, empresa_id, _barb['id'], _data_hora,
-                        nome_cliente, _fone_ag_limpo,
-                        servico_id=_serv['id'] if _serv else None,
-                        duracao_minutos=_serv['duracao_minutos'] if _serv else 30,
-                        conversation_id=conversation_id,
-                    )
-                    if _ag:
-                        logger.info(f"✅ Agendamento #{_ag['id']} criado via IA para conv {conversation_id}: {_barb_nome} em {_data_str}")
-                        # Limpar contexto de agendamento do Redis (já criou)
-                        await redis_client.delete(f"agendar_ctx:{conversation_id}")
-
-                        # ── Notifica barbeiro via WhatsApp (UazAPI) ──
-                        try:
-                            _barb_fone = _barb.get('telefone', '') or ''
-                            logger.info(f"📲 [AGENDAR-TAG] Tentando notificar barbeiro {_barb_nome}, telefone='{_barb_fone}'")
-                            if _barb_fone:
-                                _barb_fone_clean = "".join(filter(str.isdigit, str(_barb_fone)))
-                                if not _barb_fone_clean.startswith("55"):
-                                    _barb_fone_clean = "55" + _barb_fone_clean
-                                if _barb_fone_clean:
-                                    _uaz_notif = await carregar_integracao(empresa_id, 'uazapi')
-                                    if _uaz_notif:
-                                        _NOMES_DIA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
-                                        _dia_nome = _NOMES_DIA[_data_hora.weekday()]
-                                        _data_fmt = _data_hora.strftime('%d/%m/%Y')
-                                        _horario_fmt = _data_hora.strftime('%H:%M')
-                                        _serv_nome_notif = _serv['nome'] if _serv else 'Corte'
-                                        _cliente_nome_notif = nome_cliente or 'Cliente'
-
-                                        # Buscar persona do cliente para o barbeiro
-                                        _persona_bloco = ""
-                                        try:
-                                            _fone_persona_notif = await redis_client.get(f"fone_cliente:{conversation_id}")
-                                            if _fone_persona_notif:
-                                                _fp_limpo = "".join(filter(str.isdigit, str(_fone_persona_notif)))
-                                                _persona_rows = await db_pool.fetch(
-                                                    """SELECT tipo, conteudo FROM memoria_cliente
-                                                       WHERE contato_fone = $1 AND empresa_id = $2
-                                                       ORDER BY relevancia DESC, updated_at DESC LIMIT 5""",
-                                                    _fp_limpo, empresa_id
-                                                )
-                                                if _persona_rows:
-                                                    _persona_items = [f"• {r['conteudo']}" for r in _persona_rows]
-                                                    _persona_bloco = "\n\n🧑 *Sobre o cliente:*\n" + "\n".join(_persona_items)
-                                        except Exception:
-                                            pass
-
-                                        _msg_barb = (
-                                            f"📅 *Novo Agendamento!*\n\n"
-                                            f"👤 Cliente: {_cliente_nome_notif}\n"
-                                            f"📆 {_dia_nome}, {_data_fmt} às {_horario_fmt}\n"
-                                            f"✂️ {_serv_nome_notif}"
-                                            f"{_persona_bloco}\n\n"
-                                            f"Prepare-se! 💈"
-                                        )
-
-                                        _uaz_cli_notif = UazAPIClient(
-                                            _uaz_notif.get('url') or _uaz_notif.get('api_url'),
-                                            _uaz_notif.get('token'),
-                                            _uaz_notif.get('instance', 'default')
-                                        )
-                                        await _uaz_cli_notif.send_text(_barb_fone_clean, _msg_barb)
-                                        logger.info(f"📲 Notificação de agendamento enviada para barbeiro {_barb_nome} ({_barb_fone_clean})")
-                                    else:
-                                        logger.debug(f"📲 UazAPI não configurada para empresa {empresa_id}, notificação ao barbeiro não enviada")
-                            else:
-                                logger.debug(f"📲 Barbeiro {_barb_nome} não tem telefone cadastrado, notificação não enviada")
-                        except Exception as _e_notif:
-                            logger.warning(f"⚠️ Erro ao notificar barbeiro {_barb_nome} sobre agendamento: {_e_notif}")
-
-                        # ── UPSELL: verificar slot livre após o agendamento ──
-                        try:
-                            from src.services.agendamento_service import verificar_upsell
-                            _upsell_tag = await verificar_upsell(
-                                db_pool, empresa_id, _barb['id'], _data_hora,
-                                _serv['duracao_minutos'] if _serv else 30,
-                                servico_agendado_id=_serv['id'] if _serv else None,
-                            )
-                            if _upsell_tag and _upsell_tag['sugestoes']:
-                                import json as _json_up
-                                await redis_client.setex(f"upsell_pendente:{conversation_id}", 300, _json_up.dumps(_upsell_tag))
-                                logger.info(f"💰 [UPSELL] Sugestão armazenada via tag para conv {conversation_id}")
-                        except Exception as _up_tag_err:
-                            logger.warning(f"⚠️ [UPSELL] Erro: {_up_tag_err}")
-
-                    else:
-                        logger.warning(f"⚠️ Conflito ao criar agendamento via IA para conv {conversation_id}")
-                elif not _barb:
-                    logger.warning(f"⚠️ Barbeiro '{_barb_nome}' não encontrado para agendamento via IA (empresa={empresa_id})")
-            except Exception as e:
-                logger.error(f"Erro ao processar tag <AGENDAR>: {e}", exc_info=True)
-        elif db_pool and resposta_texto:
-            # Fallback: IA confirmou agendamento mas esqueceu a tag — tenta criar automaticamente
-            # Nota: não exige _intencao_agendar pois pode falhar em mensagens de confirmação simples
-            _confirmou_sem_tag = bool(re.search(
-                r'(confirmad[oa]|agendad[oa]|marcad[oa]|está marcad|agendamento.*feit|reserva.*confirmad)',
-                resposta_texto.lower()
-            ))
-            logger.info(f"📋 [AGENDAR-CHECK] conv={conversation_id} intencao={_intencao_agendar} confirmou_sem_tag={_confirmou_sem_tag} resp_inicio={resposta_texto[:80]}")
-            if _confirmou_sem_tag:
-                logger.warning(f"⚠️ [AGENDAR-FALLBACK] IA confirmou sem tag! Tentando extrair dados... Resposta: {resposta_texto[:200]}")
-                try:
-                    from src.services.agendamento_service import (
-                        criar_agendamento, buscar_barbeiro_por_nome, buscar_servico_por_nome,
-                        parse_data_texto, parse_hora_texto, listar_barbeiros, listar_servicos,
-                        obter_slots_disponiveis,
-                    )
-                    # Extrair data/hora da resposta da IA
-                    _resp_lower = resposta_texto.lower()
-                    _fallback_data = parse_data_texto(_resp_lower)
-                    _fallback_hora = parse_hora_texto(_resp_lower)
-                    logger.info(f"📅 [AGENDAR-FALLBACK] Parse resposta: data={_fallback_data} hora={_fallback_hora}")
-
-                    # Se não achou na resposta, tenta do texto do cliente
-                    if not _fallback_data and texto_cliente_unificado:
-                        _fallback_data = parse_data_texto(texto_cliente_unificado)
-                        logger.info(f"📅 [AGENDAR-FALLBACK] Parse cliente: data={_fallback_data}")
-                    if not _fallback_hora and texto_cliente_unificado:
-                        _fallback_hora = parse_hora_texto(texto_cliente_unificado)
-                        logger.info(f"📅 [AGENDAR-FALLBACK] Parse cliente: hora={_fallback_hora}")
-
-                    # Se ainda não achou hora, tenta no estado/histórico da conversa
-                    if not _fallback_hora and novo_estado:
-                        _estado_lower = novo_estado.lower() if isinstance(novo_estado, str) else str(novo_estado).lower()
-                        _fallback_hora = parse_hora_texto(_estado_lower)
-                        if _fallback_hora:
-                            logger.info(f"📅 [AGENDAR-FALLBACK] Hora extraída do histórico: {_fallback_hora}")
-
-                    # Último recurso: se tem data e barbeiro mas falta hora, usa primeiro slot disponível
-                    if not _fallback_hora and _fallback_data:
-                        try:
-                            _fb_barbs_temp = await listar_barbeiros(db_pool, empresa_id)
-                            _fb_barb_temp = None
-                            for _bt in _fb_barbs_temp:
-                                if _bt['nome'].lower() in _resp_lower:
-                                    _fb_barb_temp = _bt
-                                    break
-                            if not _fb_barb_temp and len(_fb_barbs_temp) == 1:
-                                _fb_barb_temp = _fb_barbs_temp[0]
-                            if _fb_barb_temp:
-                                _fb_slots = await obter_slots_disponiveis(db_pool, empresa_id, _fallback_data, _fb_barb_temp['id'])
-                                if _fb_slots:
-                                    _fallback_hora = _fb_slots[0]['horario']
-                                    logger.info(f"📅 [AGENDAR-FALLBACK] Hora = primeiro slot disponível: {_fallback_hora}")
-                        except Exception as _slot_err:
-                            logger.warning(f"⚠️ [AGENDAR-FALLBACK] Erro ao buscar slots: {_slot_err}")
-
-                    # Extrair barbeiro — procura nomes conhecidos na resposta
-                    _fallback_barb = None
-                    _all_barbs = await listar_barbeiros(db_pool, empresa_id)
-                    for _b in _all_barbs:
-                        if _b['nome'].lower() in _resp_lower:
-                            _fallback_barb = _b
-                            break
-                    # Se só tem 1 barbeiro, usa ele
-                    if not _fallback_barb and len(_all_barbs) == 1:
-                        _fallback_barb = _all_barbs[0]
-
-                    # Extrair serviço — procura nomes conhecidos na resposta
-                    _fallback_serv = None
-                    _all_servs = await listar_servicos(db_pool, empresa_id)
-                    for _s in _all_servs:
-                        if _s['nome'].lower() in _resp_lower:
-                            _fallback_serv = _s
-                            break
-                    if not _fallback_serv and len(_all_servs) == 1:
-                        _fallback_serv = _all_servs[0]
-
-                    if _fallback_data and _fallback_hora and _fallback_barb:
-                        _fb_hora_parts = list(map(int, _fallback_hora.split(":")))
-                        _fb_data_hora = _fallback_data.replace(hour=_fb_hora_parts[0], minute=_fb_hora_parts[1], second=0)
-
-                        _fone_fb = await redis_client.get(f"fone_cliente:{conversation_id}")
-                        _fone_fb_limpo = "".join(filter(str.isdigit, str(_fone_fb))) if _fone_fb else ""
-
-                        _ag_fb = await criar_agendamento(
-                            db_pool, empresa_id, _fallback_barb['id'], _fb_data_hora,
-                            nome_cliente, _fone_fb_limpo,
-                            servico_id=_fallback_serv['id'] if _fallback_serv else None,
-                            duracao_minutos=_fallback_serv['duracao_minutos'] if _fallback_serv else 30,
-                            conversation_id=conversation_id,
-                        )
-                        if _ag_fb:
-                            logger.info(f"✅ [AGENDAR-FALLBACK] Agendamento #{_ag_fb['id']} criado! barb={_fallback_barb['nome']} data={_fb_data_hora}")
-                            # Limpar contexto de agendamento do Redis (já criou)
-                            await redis_client.delete(f"agendar_ctx:{conversation_id}")
-                            # Notificar barbeiro
-                            _fb_barb_fone = _fallback_barb.get('telefone', '') or ''
-                            logger.info(f"📲 [AGENDAR-FALLBACK] Tentando notificar barbeiro {_fallback_barb['nome']}, telefone='{_fb_barb_fone}'")
-                            if _fb_barb_fone:
-                                try:
-                                    _fb_integ = await carregar_integracao(empresa_id, 'uazapi')
-                                    if _fb_integ:
-                                        from src.services.agendamento_service import DIAS_SEMANA_PT
-                                        _fb_dia_nome = DIAS_SEMANA_PT.get(_fb_data_hora.weekday(), "")
-                                        # Buscar persona do cliente
-                                        _fb_persona = ""
-                                        try:
-                                            if _fone_fb_limpo:
-                                                _fb_pr = await db_pool.fetch(
-                                                    """SELECT conteudo FROM memoria_cliente
-                                                       WHERE contato_fone = $1 AND empresa_id = $2
-                                                       ORDER BY relevancia DESC LIMIT 5""",
-                                                    _fone_fb_limpo, empresa_id
-                                                )
-                                                if _fb_pr:
-                                                    _fb_persona = "\n\n🧑 *Sobre o cliente:*\n" + "\n".join(f"• {r['conteudo']}" for r in _fb_pr)
-                                        except Exception:
-                                            pass
-                                        _fb_msg = f"📅 *Novo Agendamento!*\n\n👤 Cliente: {nome_cliente}\n📆 {_fb_dia_nome.capitalize()}, {_fb_data_hora.strftime('%d/%m')} às {_fb_data_hora.strftime('%H:%M')}\n✂️ {_fallback_serv['nome'] if _fallback_serv else 'Corte'}{_fb_persona}\n\nPrepare-se! 💈"
-                                        _fb_fone_limpo = "".join(filter(str.isdigit, _fb_barb_fone))
-                                        if not _fb_fone_limpo.startswith("55"):
-                                            _fb_fone_limpo = "55" + _fb_fone_limpo
-                                        from src.services.uazapi_client import UazAPIClient
-                                        _fb_uaz = UazAPIClient(
-                                            _fb_integ.get('url') or _fb_integ.get('api_url'),
-                                            _fb_integ.get('token'),
-                                            _fb_integ.get('instance', 'default')
-                                        )
-                                        await _fb_uaz.send_text(_fb_fone_limpo, _fb_msg)
-                                        logger.info(f"📲 [AGENDAR-FALLBACK] Barbeiro {_fallback_barb['nome']} notificado")
-                                except Exception as _notif_err:
-                                    logger.warning(f"⚠️ Falha ao notificar barbeiro (fallback): {_notif_err}")
-
-                            # ── UPSELL: verificar slot livre após o agendamento ──
-                            try:
-                                from src.services.agendamento_service import verificar_upsell
-                                _upsell = await verificar_upsell(
-                                    db_pool, empresa_id, _fallback_barb['id'],
-                                    _fb_data_hora, _fallback_serv['duracao_minutos'] if _fallback_serv else 30,
-                                    servico_agendado_id=_fallback_serv['id'] if _fallback_serv else None,
-                                )
-                                if _upsell and _upsell['sugestoes']:
-                                    _sug = _upsell['sugestoes'][0]
-                                    _upsell_key = f"upsell_pendente:{conversation_id}"
-                                    import json as _json_upsell
-                                    await redis_client.setex(_upsell_key, 300, _json_upsell.dumps(_upsell))
-                                    logger.info(f"💰 [UPSELL] Sugestão armazenada: {_sug['servico_nome']} R${_sug['preco_desconto']} (slot livre às {_upsell['horario_livre_apos']})")
-                            except Exception as _up_err:
-                                logger.warning(f"⚠️ [UPSELL] Erro ao verificar: {_up_err}")
-                        else:
-                            logger.warning(f"⚠️ [AGENDAR-FALLBACK] Conflito ao criar agendamento")
-                    else:
-                        _missing = []
-                        if not _fallback_data: _missing.append("data")
-                        if not _fallback_hora: _missing.append("hora")
-                        if not _fallback_barb: _missing.append("barbeiro")
-                        logger.warning(f"⚠️ [AGENDAR-FALLBACK] Dados insuficientes para criar: faltam {', '.join(_missing)}")
-                except Exception as _fb_err:
-                    logger.error(f"❌ [AGENDAR-FALLBACK] Erro: {_fb_err}", exc_info=True)
-
-        # --- Handler de CANCELAMENTO via tag <CANCELAR_AGENDAMENTO:id> ---
-        _cancelar_match = re.search(r'<CANCELAR_AGENDAMENTO:(\d+)>', resposta_texto or '')
-        if _cancelar_match and db_pool:
-            resposta_texto = re.sub(r'<CANCELAR_AGENDAMENTO:\d+>', '', resposta_texto).strip()
-            try:
-                from src.services.agendamento_service import cancelar_agendamento
-                _ag_id = int(_cancelar_match.group(1))
-                await cancelar_agendamento(db_pool, _ag_id)
-                logger.info(f"❌ Agendamento #{_ag_id} cancelado via IA para conv {conversation_id}")
-            except Exception as e:
-                logger.error(f"Erro ao cancelar agendamento via IA: {e}")
-
-        # --- Handler de PERSONA DO CLIENTE via tag <PERSONA:tipo|conteudo> ---
-        _persona_matches = re.findall(r'<PERSONA:\s*([^|]+)\|([^>]+)>', resposta_texto or '')
-        if _persona_matches and db_pool:
-            resposta_texto = re.sub(r'<PERSONA:[^>]*>', '', resposta_texto).strip()
-            _fone_persona = await redis_client.get(f"fone_cliente:{conversation_id}")
-            if _fone_persona:
-                _fone_persona_limpo = "".join(filter(str.isdigit, str(_fone_persona)))
-                for _ptipo, _pconteudo in _persona_matches:
-                    _ptipo = _ptipo.strip().lower()
-                    _pconteudo = _pconteudo.strip()
-                    if _ptipo not in ("persona", "preferencia", "historico"):
-                        _ptipo = "persona"
-                    try:
-                        # Verifica duplicata
-                        _existing_mem = await db_pool.fetchval(
-                            """SELECT id FROM memoria_cliente
-                               WHERE contato_fone = $1 AND empresa_id = $2 AND tipo = $3 AND conteudo = $4
-                               LIMIT 1""",
-                            _fone_persona_limpo, empresa_id, _ptipo, _pconteudo
-                        )
-                        if _existing_mem:
-                            await db_pool.execute(
-                                "UPDATE memoria_cliente SET relevancia = relevancia + 0.1, updated_at = NOW() WHERE id = $1",
-                                _existing_mem
-                            )
-                        else:
-                            await db_pool.execute(
-                                """INSERT INTO memoria_cliente (empresa_id, contato_fone, tipo, conteudo, relevancia)
-                                   VALUES ($1, $2, $3, $4, $5)""",
-                                empresa_id, _fone_persona_limpo, _ptipo, _pconteudo, 1.0
-                            )
-                        # Invalida cache
-                        await redis_client.delete(f"{empresa_id}:memoria_lp:{_fone_persona_limpo}")
-                        logger.info(f"🧑 [PERSONA] Salvo [{_ptipo}]: {_pconteudo[:60]} (conv={conversation_id})")
-                    except Exception as _pe:
-                        logger.warning(f"⚠️ [PERSONA] Erro ao salvar: {_pe}")
 
         # --- Salvar estado ---
         async with redis_client.pipeline(transaction=True) as pipe:
@@ -5896,7 +5227,7 @@ async def chatwoot_webhook(
                         f"\n\nComo posso te ajudar? 😊"
                     )
                     await enviar_mensagem_chatwoot(
-                        account_id, id_conv, _msg_confirmacao, _nome_ia_temp, integracao
+                        account_id, id_conv, _msg_confirmacao, _nome_ia_temp, integracao, empresa_id
                     )
 
                     lock_key = f"agendar_lock:{id_conv}"
