@@ -3883,6 +3883,61 @@ async def processar_ia_e_responder(
 
         # Fast-path desativado: sempre seguir pelo fluxo FAQ + IA.
         texto_cliente_unificado = " ".join([t for t in (textos + transcricoes) if t]).strip()
+
+        # ── AVALIAÇÃO: intercepta nota 1-5 enviada pelo cliente ──
+        _texto_limpo_av = texto_cliente_unificado.strip()
+        if _texto_limpo_av in ("1", "2", "3", "4", "5") and db_pool and redis_client:
+            _fone_av = await redis_client.get(f"fone_cliente:{conversation_id}") or ""
+            if isinstance(_fone_av, bytes):
+                _fone_av = _fone_av.decode('utf-8')
+            _fone_av_limpo = "".join(filter(str.isdigit, str(_fone_av)))
+            if _fone_av_limpo:
+                try:
+                    # Busca último agendamento concluído deste cliente
+                    _ag_av = await db_pool.fetchrow("""
+                        SELECT a.*, b.nome as barbeiro_nome
+                        FROM agendamentos a
+                        LEFT JOIN barbeiros b ON b.id = a.barbeiro_id
+                        WHERE a.empresa_id = $1
+                          AND a.cliente_telefone LIKE '%' || $2 || '%'
+                          AND a.status = 'concluido'
+                        ORDER BY a.updated_at DESC LIMIT 1
+                    """, empresa_id, _fone_av_limpo[-8:])
+
+                    if _ag_av:
+                        # Verifica se já avaliou este agendamento
+                        _ja_avaliou = await db_pool.fetchval(
+                            "SELECT 1 FROM avaliacoes WHERE agendamento_id = $1", _ag_av['id']
+                        )
+                        if not _ja_avaliou:
+                            from src.services.agendamento_service import salvar_avaliacao, formatar_avaliacao_obrigado
+                            _nota_av = int(_texto_limpo_av)
+                            await salvar_avaliacao(
+                                db_pool, _ag_av['id'], empresa_id,
+                                _ag_av['barbeiro_id'], _nota_av,
+                                cliente_telefone=_fone_av_limpo
+                            )
+                            logger.info(f"⭐ Avaliação {_nota_av}/5 salva para agendamento #{_ag_av['id']} (barbeiro: {_ag_av['barbeiro_nome']})")
+
+                            # Envia agradecimento
+                            _uaz_agr = await carregar_integracao(empresa_id, 'uazapi')
+                            if _uaz_agr:
+                                _pers_av = await carregar_personalidade(empresa_id) or {}
+                                _msg_obrigado = formatar_avaliacao_obrigado(_nota_av, {"msg_avaliacao_obrigado": _pers_av.get("msg_avaliacao_obrigado")})
+                                _fone_agr = _fone_av_limpo
+                                if not _fone_agr.startswith("55"):
+                                    _fone_agr = "55" + _fone_agr
+                                _uaz_cli_agr = UazAPIClient(
+                                    base_url=_uaz_agr.get("url", ""),
+                                    token=_uaz_agr.get("token", ""),
+                                    instance_name=_uaz_agr.get("instance", "default")
+                                )
+                                await _uaz_cli_agr.enviar_texto(_fone_agr, _msg_obrigado)
+                                logger.info(f"🙏 Agradecimento de avaliação enviado para {_fone_agr}")
+                            return  # Não precisa chamar a IA — avaliação processada
+                except Exception as e:
+                    logger.error(f"❌ Erro ao processar avaliação: {e}", exc_info=True)
+
         if texto_cliente_unificado and not imagens_urls:
             intencao_motor = detectar_intencao(texto_cliente_unificado)
 
@@ -4079,6 +4134,12 @@ Parcerias e Convênios: {convenios_prompt}
 Tour Virtual: {'vídeo disponível' if unidade.get('link_tour_virtual') else 'não disponível'}
 """
 
+            # ── Data de hoje (pré-computada para o prompt) ──
+            _agora_sp = datetime.now(ZoneInfo('America/Sao_Paulo'))
+            _dias_semana_pt = ['segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado','domingo']
+            _hoje_str = _agora_sp.strftime('%Y-%m-%d')
+            _hoje_dia_semana = _dias_semana_pt[_agora_sp.weekday()]
+
             # ── Campos conhecidos da personalidade_ia ──────────────────────────
             tom_voz          = pers.get('tom_voz') or 'Descontraído, próximo e profissional — como um barbeiro experiente falando com um cliente'
             estilo           = pers.get('estilo_comunicacao') or 'Direto ao ponto, usa gírias leves, nunca formal demais. Fala como um cara da barbearia.'
@@ -4162,8 +4223,9 @@ NUNCA avalie respostas com frases como "is perfect", "that's great", "perfect an
 Você é um atendente — apenas responda o cliente diretamente.
 
 Seu nome é {nome_ia}. Você é o atendente virtual de {nome_empresa}.
-DATA DE HOJE: {datetime.now(ZoneInfo('America/Sao_Paulo')).strftime('%Y-%m-%d %A')}.
-Use esta data para calcular "amanhã", "segunda", etc. ao gerar tags <AGENDAR>.
+DATA DE HOJE: {_hoje_str} ({_hoje_dia_semana}).
+Use esta data para calcular "amanhã", "segunda", "terça", etc. ao gerar tags <AGENDAR>.
+ATENÇÃO COM DATAS: "amanhã" = hoje + 1 dia. "segunda" = próxima segunda-feira. "terça" = próxima terça-feira. Calcule CORRETAMENTE o YYYY-MM-DD antes de gerar a tag.
 IMPORTANTE: NUNCA diga que vai "enviar um áudio", "mandar um áudio" ou "responder por áudio". O sistema de áudio é automático — você só precisa responder a pergunta normalmente. Se o cliente pedir áudio, responda a pergunta dele diretamente sem mencionar áudio.
 """
             if slug:
@@ -4333,15 +4395,17 @@ REGRAS CRÍTICAS:
 - NUNCA confirme agendamento sem incluir a tag — sem tag = não salva = cliente fica sem horário
 
 UPSELL INTELIGENTE (OBRIGATÓRIO):
-Após confirmar o agendamento, verifique se existe horário vago logo depois do serviço agendado.
-Se houver, ofereça NATURALMENTE um serviço COMPLEMENTAR (diferente do que o cliente já escolheu).
+Após confirmar o PRIMEIRO agendamento, ofereça UM serviço COMPLEMENTAR se houver horário vago logo depois.
 Exemplo: cliente agendou Corte das 08:30 às 09:00 e o horário 09:00-09:30 está livre →
-"Aproveitando que você já vai estar aqui, que tal fazer a barba também? Temos o horário das 09:00 livre logo em seguida! 💈"
+"Aproveitando que já vai estar aqui, que tal fazer a barba também? Temos um horário logo em seguida!"
 REGRAS DO UPSELL:
 - NUNCA ofereça o mesmo serviço que o cliente já agendou
 - Só ofereça se realmente houver horário vago após o agendamento
-- Seja natural e não insistente — ofereça UMA vez só
-- Use os serviços cadastrados no sistema
+- Ofereça UMA ÚNICA VEZ na conversa inteira — se já ofereceu, NUNCA repita
+- NUNCA ofereça upsell mais de uma vez, mesmo que o cliente aceite ou recuse
+- Se o cliente ACEITAR o upsell: gere uma tag <AGENDAR> para o NOVO serviço com o horário SEGUINTE ao do agendamento anterior. NÃO repita confirmação do agendamento original. NÃO ofereça outro upsell. Responda apenas algo como "Adicionei a barba logo depois do seu corte!"
+- Se o cliente RECUSAR o upsell: apenas aceite com algo curto tipo "Tranquilo!" — NÃO ofereça nada mais
+- CRÍTICO: Quando o cliente responde "pode ser", "ok", "sim" a um upsell, isso é aceitação do upsell, NÃO um novo agendamento. Use a tag <AGENDAR> com o SERVIÇO DO UPSELL e o HORÁRIO SEGUINTE
 
 FLUXO DE ATENDIMENTO (OBRIGATÓRIO):
 Você é um atendente de barbearia, não um robô de FAQ. Siga este fluxo:
@@ -4356,6 +4420,16 @@ REGRAS do fluxo:
 - Guie o cliente para agendar: pergunte barbeiro, serviço, dia e horário
 - Quando tiver barbeiro + dia + horário confirmados → GERE A TAG <AGENDAR:...> IMEDIATAMENTE
 - NUNCA diga "vou agendar" sem gerar a tag — sem tag = sem agendamento real
+
+CONCLUSÃO DE ATENDIMENTO (PÓS-CORTE):
+Quando o cliente indicar que o serviço já foi realizado (ex: "já cortei", "acabei", "terminei", "saindo da barbearia", "corte ficou top"),
+OU quando o SISTEMA informar que o horário do agendamento já passou:
+1. Pergunte ao cliente: "Show! Posso concluir seu agendamento?" (ou variação natural)
+2. Se o cliente confirmar (sim, pode, ok, ta bom, pode sim, beleza):
+   → Gere a tag <CONCLUIR> no final da resposta
+   → Responda algo como "Pronto, concluído! Logo te mando uma pesquisa rápida de avaliação 😊"
+3. Se o cliente não confirmar, apenas continue a conversa normalmente
+4. A tag <CONCLUIR> é invisível pro cliente — ela aciona o pedido de avaliação automaticamente
 
 REGRAS DE TOM (OBRIGATÓRIO):
 - NUNCA comece resposta com "Olá" se já houve troca de mensagens — vá direto ao ponto
@@ -4710,6 +4784,21 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                 "seu corte", "agendei", "está confirmado", "ta agendado",
                 "reservado", "horário confirmado"
             ])
+
+            # ── Guard: se o cliente ACABOU de agendar e a IA respondeu a um upsell,
+            # não tratar como novo agendamento ──
+            _ja_tem_agendamento = await redis_client.exists(f"agendamento_feito:{conversation_id}")
+            _texto_cli_lower = texto_cliente_unificado.lower() if texto_cliente_unificado else ""
+            _eh_resposta_upsell = _ja_tem_agendamento and any(w in _texto_cli_lower for w in [
+                "pode ser", "pode sim", "quero", "bora", "sim", "ok", "ta bom", "tá bom",
+                "vamos", "manda ver", "fecha", "não quero", "nao quero", "não", "nao",
+                "obrigado", "valeu", "tranquilo"
+            ]) and len(_texto_cli_lower.split()) <= 6  # respostas curtas = provavelmente resposta ao upsell
+
+            if _confirma_palavras and _eh_resposta_upsell:
+                logger.info(f"⏭️ [AGENDAR Fallback] Ignorado: resposta ao upsell, não é novo agendamento. Texto: '{texto_cliente_unificado}'")
+                _confirma_palavras = False
+
             if _confirma_palavras:
                 logger.info(f"🔄 [AGENDAR Fallback] IA confirmou agendamento sem tag, tentando extrair dados...")
                 try:
@@ -4811,6 +4900,11 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                     _ag_data_hora = datetime.strptime(f"{_ag_data_str} {_ag_hora_str}", "%Y-%m-%d %H:%M")
                     _ag_cliente_nome = await redis_client.get(f"nome_cliente:{conversation_id}") or "Cliente"
                     _ag_cliente_fone = await redis_client.get(f"fone_cliente:{conversation_id}") or ""
+                    if isinstance(_ag_cliente_nome, bytes):
+                        _ag_cliente_nome = _ag_cliente_nome.decode('utf-8')
+                    if isinstance(_ag_cliente_fone, bytes):
+                        _ag_cliente_fone = _ag_cliente_fone.decode('utf-8')
+                    logger.info(f"📞 [AGENDAR] cliente_nome='{_ag_cliente_nome}' cliente_fone='{_ag_cliente_fone}' conv={conversation_id}")
                     _ag_duracao = _ag_servico.get("duracao_minutos", 30) if _ag_servico else 30
 
                     _ag_result = await criar_agendamento(
@@ -4826,11 +4920,14 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                         logger.warning(f"⚠️ Agendamento NÃO criado (conflito de horário): {_ag_barbeiro_nome} em {_ag_data_str} {_ag_hora_str}")
                     else:
                         logger.info(f"✅ Agendamento #{_ag_result.get('id')} salvo: {_ag_cliente_nome} com {_ag_barbeiro_nome} em {_ag_data_str} {_ag_hora_str}")
+                        # Marca que já teve agendamento nesta conversa (para controle de upsell)
+                        await redis_client.setex(f"agendamento_feito:{conversation_id}", 86400, f"{_ag_barbeiro_nome}|{_ag_data_str}|{_ag_hora_str}")
 
                     # ── Confirmação WhatsApp para o CLIENTE ──
                     if _ag_result and _ag_cliente_fone:
                         try:
                             _uaz_confirm = await carregar_integracao(empresa_id, 'uazapi')
+                            logger.info(f"📩 [Confirm] uazapi={'OK' if _uaz_confirm else 'NONE'} fone='{_ag_cliente_fone}'")
                             if _uaz_confirm:
                                 from src.services.agendamento_service import formatar_agendamento_confirmacao
                                 _templates = {
@@ -4847,10 +4944,15 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                                     token=_uaz_confirm.get("token", ""),
                                     instance_name=_uaz_confirm.get("instance", "default")
                                 )
+                                logger.info(f"📩 [Confirm] Enviando para {_cli_fone_limpo}: {_msg_cliente[:60]}...")
                                 await _uaz_cli_confirm.enviar_texto(_cli_fone_limpo, _msg_cliente)
                                 logger.info(f"📩 Confirmação enviada para cliente {_ag_cliente_nome} ({_cli_fone_limpo})")
+                            else:
+                                logger.warning(f"⚠️ [Confirm] UazAPI não configurada para empresa {empresa_id}")
                         except Exception as e:
-                            logger.error(f"❌ Erro ao enviar confirmação pro cliente: {e}")
+                            logger.error(f"❌ Erro ao enviar confirmação pro cliente: {e}", exc_info=True)
+                    elif _ag_result and not _ag_cliente_fone:
+                        logger.warning(f"⚠️ [Confirm] Agendamento criado mas sem telefone do cliente! conv={conversation_id}")
 
                     # ── Notificação WhatsApp para o barbeiro ──
                     _ag_barb_fone = _ag_barbeiro.get("telefone")
@@ -4919,6 +5021,56 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                     logger.warning(f"⚠️ Barbeiro '{_ag_barbeiro_nome}' não encontrado no banco")
             except Exception as e:
                 logger.error(f"❌ Erro ao processar tag AGENDAR: {e}", exc_info=True)
+
+        # --- Handler: tag <CONCLUIR> — conclusão de atendimento + cadência avaliação ---
+        if "<CONCLUIR>" in (resposta_texto or "") and db_pool:
+            resposta_texto = resposta_texto.replace("<CONCLUIR>", "").strip()
+            try:
+                _cli_fone_concluir = await redis_client.get(f"fone_cliente:{conversation_id}") or ""
+                if _cli_fone_concluir:
+                    _fone_limpo_c = "".join(filter(str.isdigit, str(_cli_fone_concluir)))
+                    # Busca último agendamento confirmado deste cliente
+                    _ag_concluir = await db_pool.fetchrow("""
+                        SELECT a.*, b.nome as barbeiro_nome, s.nome as servico_nome
+                        FROM agendamentos a
+                        LEFT JOIN barbeiros b ON b.id = a.barbeiro_id
+                        LEFT JOIN servicos s ON s.id = a.servico_id
+                        WHERE a.empresa_id = $1
+                          AND a.cliente_telefone LIKE '%' || $2 || '%'
+                          AND a.status = 'confirmado'
+                        ORDER BY a.data_hora DESC LIMIT 1
+                    """, empresa_id, _fone_limpo_c[-8:])
+
+                    if _ag_concluir:
+                        from src.services.agendamento_service import concluir_agendamento, formatar_pedido_avaliacao
+                        _ok_concluir = await concluir_agendamento(db_pool, _ag_concluir['id'])
+                        if _ok_concluir:
+                            logger.info(f"✅ Agendamento #{_ag_concluir['id']} concluído via tag <CONCLUIR>")
+
+                            # Envia pedido de avaliação via WhatsApp
+                            _uaz_aval = await carregar_integracao(empresa_id, 'uazapi')
+                            if _uaz_aval:
+                                _barb_nome_c = _ag_concluir['barbeiro_nome'] or "Barbeiro"
+                                _templates_aval = {"msg_avaliacao": pers.get("msg_avaliacao")}
+                                _msg_aval = formatar_pedido_avaliacao(dict(_ag_concluir), _barb_nome_c, _templates_aval)
+
+                                _fone_aval = _fone_limpo_c
+                                if not _fone_aval.startswith("55"):
+                                    _fone_aval = "55" + _fone_aval
+
+                                _uaz_cli_aval = UazAPIClient(
+                                    base_url=_uaz_aval.get("url", ""),
+                                    token=_uaz_aval.get("token", ""),
+                                    instance_name=_uaz_aval.get("instance", "default")
+                                )
+                                await _uaz_cli_aval.enviar_texto(_fone_aval, _msg_aval)
+                                logger.info(f"⭐ Pedido de avaliação enviado via CONCLUIR para {_fone_aval}")
+                        else:
+                            logger.warning(f"⚠️ Agendamento #{_ag_concluir['id']} não pôde ser concluído (status != confirmado)")
+                    else:
+                        logger.warning(f"⚠️ [CONCLUIR] Nenhum agendamento confirmado encontrado para {_fone_limpo_c}")
+            except Exception as e:
+                logger.error(f"❌ Erro ao processar tag CONCLUIR: {e}", exc_info=True)
 
         # --- Salvar estado ---
         async with redis_client.pipeline(transaction=True) as pipe:
