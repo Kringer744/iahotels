@@ -34,7 +34,7 @@ except Exception as e:
 
 echo ""
 echo "=== ALEMBIC ==="
-alembic upgrade heads 2>&1
+alembic upgrade heads 2>&1 || echo "⚠️ ALEMBIC FALHOU (continuando startup mesmo assim)"
 
 echo ""
 echo "=== INICIANDO UVICORN ==="
