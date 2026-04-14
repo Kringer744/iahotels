@@ -824,8 +824,8 @@ INTENCOES = {
     "unidades": ["unidades", "outras unidades", "lista de unidades", "quantas unidades", "onde tem", "tem em", "unidade"],
     "modalidades": ["modalidades", "serviços", "comodidades", "restaurante", "piscina", "spa", "academia", "sauna", "suíte", "suite", "quarto", "acomodação", "acomodacao", "estrutura", "atividades"],
     "infraestrutura": ["estacionamento", "recepção", "lobby", "armários", "sauna", "piscina", "acessibilidade", "infraestrutura", "wifi", "café da manhã"],
-    "reserva": ["reserva", "reservar", "check-in", "checkout", "diaria", "diária", "booking", "disponibilidade", "disponivel", "disponível"],
-    "agendamento": ["agendar", "agendamento", "marcar", "horario disponivel", "horário disponível", "corte", "cortar", "barbeiro", "barbeiros", "cabelo", "barba", "degradê", "degrade", "navalhado", "sobrancelha", "platinado", "luzes", "coloração", "tintura"]
+    "agendamento": ["agendar", "agendamento", "marcar", "horario disponivel", "horário disponível", "corte", "cortar", "barbeiro", "barbeiros", "cabelo", "barba", "degradê", "degrade", "navalhado", "sobrancelha", "platinado", "luzes", "coloração", "tintura", "disponivel", "disponível", "disponibilidade", "reservar", "reserva"],
+    "reserva": ["check-in", "checkout", "diaria", "diária", "booking"]
 }
 
 # Clientes de IA
@@ -3783,7 +3783,9 @@ async def processar_ia_e_responder(
             intencao_motor = detectar_intencao(texto_cliente_unificado)
 
         # ── AGENDAMENTO: injeta barbeiros + disponibilidade real do banco ──
-        if intencao_motor == "agendamento" and db_pool:
+        # Sempre injeta quando há db_pool (dados são leves) — garante que a IA
+        # nunca diga "não tenho os nomes dos barbeiros" independente da intenção.
+        if db_pool:
             try:
                 from src.services.agendamento_service import (
                     listar_barbeiros, listar_servicos,
