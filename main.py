@@ -4597,12 +4597,107 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
 
         # --- Handler: tag <AGENDAR:barbeiro|servico|data|hora> ---
         _agendar_match = re.search(r'<AGENDAR:\s*([^|]+)\|([^|]+)\|(\d{4}-\d{2}-\d{2})\|(\d{2}:\d{2})>', resposta_texto or '')
+
+        # ── FALLBACK: se IA confirmou agendamento no texto mas NÃO gerou a tag ──
+        if not _agendar_match and db_pool and resposta_texto:
+            _resp_lower = resposta_texto.lower()
+            _confirma_palavras = any(p in _resp_lower for p in [
+                "agendado", "confirmado", "fechado", "vou agendar", "marcado",
+                "seu corte", "agendei", "está confirmado", "ta agendado",
+                "reservado", "horário confirmado"
+            ])
+            if _confirma_palavras:
+                logger.info(f"🔄 [AGENDAR Fallback] IA confirmou agendamento sem tag, tentando extrair dados...")
+                try:
+                    from src.services.agendamento_service import (
+                        listar_barbeiros as _fb_listar_barbeiros,
+                        buscar_barbeiro_por_nome as _fb_buscar_barbeiro,
+                        buscar_servico_por_nome as _fb_buscar_servico,
+                        listar_servicos as _fb_listar_servicos,
+                        criar_agendamento as _fb_criar_agendamento,
+                    )
+                    _fb_barbeiros = await _fb_listar_barbeiros(db_pool, empresa_id)
+                    _fb_barb_found = None
+                    for _fb_b in _fb_barbeiros:
+                        if _fb_b["nome"].lower() in _resp_lower:
+                            _fb_barb_found = _fb_b
+                            break
+
+                    # Extrai horário (HH:MM ou HhMM)
+                    _fb_hora_match = re.search(r'(\d{1,2})[h:](\d{2})', _resp_lower)
+                    if not _fb_hora_match:
+                        _fb_hora_match = re.search(r'às\s+(\d{1,2}):?(\d{2})?', _resp_lower)
+
+                    # Extrai data — se menciona "amanhã", usa amanhã; senão tenta encontrar data
+                    _fb_hoje = datetime.now(ZoneInfo('America/Sao_Paulo')).replace(tzinfo=None)
+                    _fb_data = None
+                    if 'amanhã' in _resp_lower or 'amanha' in _resp_lower:
+                        _fb_data = _fb_hoje + timedelta(days=1)
+                    elif 'hoje' in _resp_lower:
+                        _fb_data = _fb_hoje
+                    else:
+                        # Tenta extrair data YYYY-MM-DD do texto
+                        _fb_data_match = re.search(r'(\d{4}-\d{2}-\d{2})', resposta_texto)
+                        if _fb_data_match:
+                            _fb_data = datetime.strptime(_fb_data_match.group(1), "%Y-%m-%d")
+                        else:
+                            # Tenta DD/MM
+                            _fb_data_match2 = re.search(r'(\d{1,2})/(\d{1,2})', resposta_texto)
+                            if _fb_data_match2:
+                                _fb_dia = int(_fb_data_match2.group(1))
+                                _fb_mes = int(_fb_data_match2.group(2))
+                                _fb_data = _fb_hoje.replace(month=_fb_mes, day=_fb_dia)
+                            else:
+                                # Assume amanhã se não encontrou data (IA geralmente agenda pra amanhã)
+                                _fb_data = _fb_hoje + timedelta(days=1)
+
+                    if _fb_barb_found and _fb_hora_match:
+                        _fb_hora = int(_fb_hora_match.group(1))
+                        _fb_min = int(_fb_hora_match.group(2) or "0")
+                        _fb_data_hora = _fb_data.replace(hour=_fb_hora, minute=_fb_min, second=0, microsecond=0)
+                        _fb_data_str = _fb_data_hora.strftime("%Y-%m-%d")
+                        _fb_hora_str = _fb_data_hora.strftime("%H:%M")
+
+                        # Detecta serviço no texto
+                        _fb_servicos = await _fb_listar_servicos(db_pool, empresa_id)
+                        _fb_serv_found = None
+                        for _fb_s in _fb_servicos:
+                            if _fb_s["nome"].lower() in _resp_lower:
+                                _fb_serv_found = _fb_s
+                                break
+                        if not _fb_serv_found and _fb_servicos:
+                            _fb_serv_found = _fb_servicos[0]  # Default: primeiro serviço
+
+                        # Anti-duplicata: verifica se já agendou nesta conversa recentemente
+                        _fb_dedup_key = f"agendado:{conversation_id}:{_fb_barb_found['id']}:{_fb_data_str}:{_fb_hora_str}"
+                        _fb_ja_agendou = await redis_client.exists(_fb_dedup_key)
+                        if _fb_ja_agendou:
+                            logger.info(f"⏭️ [AGENDAR Fallback] Agendamento duplicado ignorado: {_fb_dedup_key}")
+                        else:
+                            # Cria match sintético para o handler principal processar
+                            _ag_barbeiro_nome = _fb_barb_found["nome"]
+                            _ag_servico_nome = _fb_serv_found["nome"] if _fb_serv_found else "Corte Masculino"
+                            _ag_data_str = _fb_data_str
+                            _ag_hora_str = _fb_hora_str
+                            _agendar_match = True  # Flag para entrar no handler abaixo
+                            await redis_client.setex(_fb_dedup_key, 3600, "1")  # 1h anti-duplicata
+                            logger.info(f"✅ [AGENDAR Fallback] Detectado: {_ag_barbeiro_nome} | {_ag_servico_nome} | {_ag_data_str} | {_ag_hora_str}")
+                    else:
+                        if not _fb_barb_found:
+                            logger.warning(f"⚠️ [AGENDAR Fallback] Nenhum barbeiro encontrado na resposta")
+                        if not _fb_hora_match:
+                            logger.warning(f"⚠️ [AGENDAR Fallback] Nenhum horário encontrado na resposta")
+                except Exception as e:
+                    logger.error(f"❌ [AGENDAR Fallback] Erro: {e}", exc_info=True)
+
         if _agendar_match and db_pool:
             resposta_texto = re.sub(r'<AGENDAR:[^>]*>', '', resposta_texto).strip()
-            _ag_barbeiro_nome = _agendar_match.group(1).strip()
-            _ag_servico_nome = _agendar_match.group(2).strip()
-            _ag_data_str = _agendar_match.group(3)
-            _ag_hora_str = _agendar_match.group(4)
+            if isinstance(_agendar_match, re.Match):
+                _ag_barbeiro_nome = _agendar_match.group(1).strip()
+                _ag_servico_nome = _agendar_match.group(2).strip()
+                _ag_data_str = _agendar_match.group(3)
+                _ag_hora_str = _agendar_match.group(4)
+            # else: variables already set by fallback
             try:
                 from src.services.agendamento_service import buscar_barbeiro_por_nome, buscar_servico_por_nome, criar_agendamento
                 _ag_barbeiro = await buscar_barbeiro_por_nome(db_pool, empresa_id, _ag_barbeiro_nome)
