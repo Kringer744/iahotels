@@ -336,12 +336,51 @@ async def api_cancelar_agendamento(agendamento_id: int, user=Depends(get_current
 
 @router.patch("/agendamentos/{agendamento_id}/concluir")
 async def api_concluir_agendamento(agendamento_id: int, user=Depends(get_current_user)):
-    """Marca corte como feito — dispara avaliação automática."""
+    """Marca corte como feito — dispara avaliação automática via WhatsApp."""
     db = await get_db_pool()
+    empresa_id = user['empresa_id']
+
+    # Busca dados do agendamento antes de concluir
+    ag = await db.fetchrow("""
+        SELECT a.*, b.nome as barbeiro_nome
+        FROM agendamentos a
+        LEFT JOIN barbeiros b ON b.id = a.barbeiro_id
+        WHERE a.id = $1 AND a.empresa_id = $2
+    """, agendamento_id, empresa_id)
+    if not ag:
+        raise HTTPException(404, "Agendamento não encontrado")
+
     ok = await concluir_agendamento(db, agendamento_id)
     if not ok:
         raise HTTPException(404, "Agendamento não encontrado ou já finalizado")
-    return {"ok": True, "message": "Corte concluído! Avaliação será enviada ao cliente."}
+
+    # ── Envia pedido de avaliação via WhatsApp ──
+    _fone = ag.get('cliente_telefone')
+    if _fone:
+        try:
+            from main import carregar_integracao, carregar_personalidade, UazAPIClient
+            from src.services.agendamento_service import formatar_pedido_avaliacao
+            _uaz = await carregar_integracao(empresa_id, 'uazapi')
+            if _uaz:
+                _pers = await carregar_personalidade(empresa_id) or {}
+                _templates = {"msg_avaliacao": _pers.get("msg_avaliacao")}
+                _msg = formatar_pedido_avaliacao(dict(ag), ag['barbeiro_nome'] or "Barbeiro", _templates)
+
+                _fone_limpo = "".join(filter(str.isdigit, str(_fone)))
+                if not _fone_limpo.startswith("55"):
+                    _fone_limpo = "55" + _fone_limpo
+
+                _cli = UazAPIClient(
+                    base_url=_uaz.get("url", ""),
+                    token=_uaz.get("token", ""),
+                    instance_name=_uaz.get("instance", "default")
+                )
+                await _cli.enviar_texto(_fone_limpo, _msg)
+                logger.info(f"⭐ Pedido de avaliação enviado para {ag['cliente_nome']} (ag #{agendamento_id})")
+        except Exception as e:
+            logger.error(f"❌ Erro ao enviar avaliação: {e}")
+
+    return {"ok": True, "message": "Corte concluído! Avaliação enviada ao cliente."}
 
 
 # ═══════════════════════════════════════════════════════════

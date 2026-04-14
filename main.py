@@ -1022,6 +1022,7 @@ async def startup_event():
         asyncio.create_task(worker_metricas_diarias(), name="worker_metricas_diarias"),
         asyncio.create_task(worker_sync_planos(), name="worker_sync_planos"),
         asyncio.create_task(worker_cleanup_followups(), name="worker_cleanup_followups"),
+        asyncio.create_task(worker_lembretes_agendamento(), name="worker_lembretes_agendamento"),
         # asyncio.create_task(worker_resumo_ia(), name="worker_resumo_ia"),
     ]
     for _task in worker_tasks:
@@ -3446,6 +3447,109 @@ async def worker_metricas_diarias():
         raise
 
 
+async def worker_lembretes_agendamento():
+    """
+    Worker que verifica agendamentos e envia lembretes:
+    - 1 dia antes (lembrete_1d_enviado = false)
+    - 1 hora antes (lembrete_1h_enviado = false)
+    Roda a cada 5 minutos.
+    """
+    await asyncio.sleep(30)  # Delay inicial
+    try:
+        while True:
+            try:
+                if not await _worker_leader_check("lembretes_agendamento"):
+                    await asyncio.sleep(300)
+                    continue
+
+                if not db_pool:
+                    await asyncio.sleep(300)
+                    continue
+
+                agora = datetime.now(ZoneInfo('America/Sao_Paulo')).replace(tzinfo=None)
+
+                # ── Lembrete 1 DIA antes ──
+                _rows_1d = await db_pool.fetch("""
+                    SELECT a.*, b.nome as barbeiro_nome, s.nome as servico_nome
+                    FROM agendamentos a
+                    LEFT JOIN barbeiros b ON b.id = a.barbeiro_id
+                    LEFT JOIN servicos s ON s.id = a.servico_id
+                    WHERE a.status = 'confirmado'
+                      AND a.lembrete_1d_enviado = false
+                      AND a.data_hora::timestamp BETWEEN ($1::timestamp + interval '23 hours') AND ($1::timestamp + interval '25 hours')
+                      AND a.cliente_telefone IS NOT NULL AND a.cliente_telefone != ''
+                """, agora)
+
+                for _ag in _rows_1d:
+                    try:
+                        _emp_id = _ag['empresa_id']
+                        _uaz = await carregar_integracao(_emp_id, 'uazapi')
+                        if not _uaz:
+                            continue
+                        _pers = await carregar_personalidade(_emp_id) or {}
+                        _templates = {"msg_lembrete_1d": _pers.get("msg_lembrete_1d")}
+
+                        from src.services.agendamento_service import formatar_lembrete
+                        _msg = formatar_lembrete(dict(_ag), _ag['barbeiro_nome'] or "Barbeiro", "1d", _templates)
+
+                        _fone = "".join(filter(str.isdigit, str(_ag['cliente_telefone'])))
+                        if not _fone.startswith("55"):
+                            _fone = "55" + _fone
+
+                        _cli = UazAPIClient(base_url=_uaz.get("url", ""), token=_uaz.get("token", ""), instance_name=_uaz.get("instance", "default"))
+                        await _cli.enviar_texto(_fone, _msg)
+                        await db_pool.execute("UPDATE agendamentos SET lembrete_1d_enviado = true WHERE id = $1", _ag['id'])
+                        logger.info(f"📅 Lembrete 1D enviado para {_ag['cliente_nome']} (ag #{_ag['id']})")
+                    except Exception as e:
+                        logger.error(f"❌ Erro lembrete 1D ag #{_ag['id']}: {e}")
+
+                # ── Lembrete 1 HORA antes ──
+                _rows_1h = await db_pool.fetch("""
+                    SELECT a.*, b.nome as barbeiro_nome, s.nome as servico_nome
+                    FROM agendamentos a
+                    LEFT JOIN barbeiros b ON b.id = a.barbeiro_id
+                    LEFT JOIN servicos s ON s.id = a.servico_id
+                    WHERE a.status = 'confirmado'
+                      AND a.lembrete_1h_enviado = false
+                      AND a.data_hora::timestamp BETWEEN ($1::timestamp + interval '50 minutes') AND ($1::timestamp + interval '70 minutes')
+                      AND a.cliente_telefone IS NOT NULL AND a.cliente_telefone != ''
+                """, agora)
+
+                for _ag in _rows_1h:
+                    try:
+                        _emp_id = _ag['empresa_id']
+                        _uaz = await carregar_integracao(_emp_id, 'uazapi')
+                        if not _uaz:
+                            continue
+                        _pers = await carregar_personalidade(_emp_id) or {}
+                        _templates = {"msg_lembrete_1h": _pers.get("msg_lembrete_1h")}
+
+                        from src.services.agendamento_service import formatar_lembrete
+                        _msg = formatar_lembrete(dict(_ag), _ag['barbeiro_nome'] or "Barbeiro", "1h", _templates)
+
+                        _fone = "".join(filter(str.isdigit, str(_ag['cliente_telefone'])))
+                        if not _fone.startswith("55"):
+                            _fone = "55" + _fone
+
+                        _cli = UazAPIClient(base_url=_uaz.get("url", ""), token=_uaz.get("token", ""), instance_name=_uaz.get("instance", "default"))
+                        await _cli.enviar_texto(_fone, _msg)
+                        await db_pool.execute("UPDATE agendamentos SET lembrete_1h_enviado = true WHERE id = $1", _ag['id'])
+                        logger.info(f"⏰ Lembrete 1H enviado para {_ag['cliente_nome']} (ag #{_ag['id']})")
+                    except Exception as e:
+                        logger.error(f"❌ Erro lembrete 1H ag #{_ag['id']}: {e}")
+
+                if _rows_1d or _rows_1h:
+                    logger.info(f"📋 [Lembretes] {len(_rows_1d)} lembretes 1D + {len(_rows_1h)} lembretes 1H processados")
+
+            except Exception as e:
+                logger.error(f"❌ Erro worker lembretes: {e}", exc_info=True)
+
+            await asyncio.sleep(300)  # 5 min
+    except asyncio.CancelledError:
+        logger.info("🛑 worker_lembretes_agendamento cancelado")
+        raise
+
+
 async def worker_resumo_ia():
     """
     Worker que gera o Resumo Neural para conversas que ainda não têm resumo_ia.
@@ -4718,11 +4822,40 @@ RESPONDA com a mensagem diretamente — texto puro, sem JSON, sem ```código```,
                         servico_id=_ag_servico["id"] if _ag_servico else None,
                         duracao_minutos=_ag_duracao,
                     )
-                    logger.info(f"✅ Agendamento salvo no banco: {_ag_cliente_nome} com {_ag_barbeiro_nome} em {_ag_data_str} {_ag_hora_str}")
+                    if not _ag_result:
+                        logger.warning(f"⚠️ Agendamento NÃO criado (conflito de horário): {_ag_barbeiro_nome} em {_ag_data_str} {_ag_hora_str}")
+                    else:
+                        logger.info(f"✅ Agendamento #{_ag_result.get('id')} salvo: {_ag_cliente_nome} com {_ag_barbeiro_nome} em {_ag_data_str} {_ag_hora_str}")
+
+                    # ── Confirmação WhatsApp para o CLIENTE ──
+                    if _ag_result and _ag_cliente_fone:
+                        try:
+                            _uaz_confirm = await carregar_integracao(empresa_id, 'uazapi')
+                            if _uaz_confirm:
+                                from src.services.agendamento_service import formatar_agendamento_confirmacao
+                                _templates = {
+                                    "msg_confirmacao_agendamento": pers.get("msg_confirmacao_agendamento"),
+                                }
+                                _msg_cliente = formatar_agendamento_confirmacao(
+                                    _ag_result, _ag_barbeiro_nome, _ag_servico_nome, _templates
+                                )
+                                _cli_fone_limpo = "".join(filter(str.isdigit, str(_ag_cliente_fone)))
+                                if not _cli_fone_limpo.startswith("55"):
+                                    _cli_fone_limpo = "55" + _cli_fone_limpo
+                                _uaz_cli_confirm = UazAPIClient(
+                                    base_url=_uaz_confirm.get("url", ""),
+                                    token=_uaz_confirm.get("token", ""),
+                                    instance_name=_uaz_confirm.get("instance", "default")
+                                )
+                                await _uaz_cli_confirm.enviar_texto(_cli_fone_limpo, _msg_cliente)
+                                logger.info(f"📩 Confirmação enviada para cliente {_ag_cliente_nome} ({_cli_fone_limpo})")
+                        except Exception as e:
+                            logger.error(f"❌ Erro ao enviar confirmação pro cliente: {e}")
 
                     # ── Notificação WhatsApp para o barbeiro ──
                     _ag_barb_fone = _ag_barbeiro.get("telefone")
-                    if _ag_barb_fone:
+                    logger.info(f"📲 [Barbeiro Notif] result={'OK' if _ag_result else 'NONE'} barb_fone={_ag_barb_fone}")
+                    if _ag_result and _ag_barb_fone:
                         _uaz_notif = await carregar_integracao(empresa_id, 'uazapi')
                         if _uaz_notif:
                             _ag_barb_fone_limpo = "".join(filter(str.isdigit, str(_ag_barb_fone)))
