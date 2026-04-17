@@ -5,8 +5,21 @@ import axios from "axios";
 import {
   MessageSquare, Search, ChevronLeft, ChevronRight,
   Building2, Star, Flame, Clock, X, RefreshCw,
-  Download, Zap, Bot, BarChart3, Target, Brain, Trash2, TrendingUp, CheckCircle
+  Download, Zap, Bot, BarChart3, Target, Brain, Trash2, TrendingUp, CheckCircle,
+  Users, Activity, ArrowUpRight, ChevronRight as ChevRight
 } from "lucide-react";
+
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "agora";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -198,64 +211,106 @@ export default function ConversasPage() {
         </header>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* List Panel */}
-          <div className={`flex flex-col bg-[#0A0A0A] border-r border-white/[0.06] ${selected ? "hidden lg:flex lg:w-[400px]" : "w-full"}`}>
-            {/* Filters */}
-            <div className="p-4 space-y-2.5 border-b border-white/[0.06]">
-              <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" strokeWidth={1.75} />
-                <input
-                  value={buscaInput}
-                  onChange={e => setBuscaInput(e.target.value)}
-                  placeholder="Buscar por nome ou telefone"
-                  className="w-full bg-[#141414] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/20 transition-colors tracking-tight"
-                />
-              </form>
-              <div className="flex gap-2">
-                <select
-                  value={filterUnidade}
-                  onChange={e => { setFilterUnidade(e.target.value ? Number(e.target.value) : ""); setOffset(0); }}
-                  className="bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer flex-1 tracking-tight transition-colors"
-                >
-                  <option value="">Todas as unidades</option>
-                  {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                </select>
-                <select
-                  value={filterStatus}
-                  onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}
-                  className="bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer flex-1 tracking-tight transition-colors"
-                >
-                  <option value="">Todos os status</option>
-                  <option value="open">Ativas</option>
-                  <option value="resolved">Atendidas</option>
-                  <option value="closed">Fechadas</option>
-                </select>
-                {(busca || filterStatus || filterUnidade) && (
-                  <button
-                    onClick={clearFilters}
-                    title="Limpar filtros"
-                    className="bg-[#141414] text-zinc-400 hover:text-white border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-2 transition-colors"
+          {/* ═════════════ LIST PANEL ═════════════
+              Full-width CRM table when nothing selected.
+              Shrinks to 360px compact list when a conversation is open.
+          ═══════════════════════════════════════ */}
+          <div className={`flex flex-col bg-[#0A0A0A] ${selected ? "hidden lg:flex lg:w-[360px] border-r border-white/[0.06]" : "w-full"}`}>
+
+            {/* ── Stats strip (only visible when full width) ── */}
+            {!selected && (
+              <div className="px-6 lg:px-8 pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(() => {
+                    const ativas = conversations.filter(c => c.status === "open").length;
+                    const pausadas = conversations.filter(c => c.pausada).length;
+                    const quentes = conversations.filter(c => c.intencao_de_compra).length;
+                    const stats = [
+                      { label: "Total", value: total, icon: Users },
+                      { label: "Ativas", value: ativas, icon: Activity, dot: "bg-emerald-400" },
+                      { label: "IA pausada", value: pausadas, icon: Bot, dot: "bg-zinc-400" },
+                      { label: "Leads quentes", value: quentes, icon: Flame, dot: "bg-white" },
+                    ];
+                    return stats.map(s => (
+                      <div key={s.label} className="bg-[#141414] border border-white/[0.06] rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            {s.dot && <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />}
+                            <p className="text-xs text-zinc-400 tracking-tight">{s.label}</p>
+                          </div>
+                          <p className="text-[28px] font-normal text-white tracking-[-0.02em] tabular-nums leading-none">
+                            {loading ? <span className="inline-block w-8 h-6 bg-white/[0.06] rounded animate-pulse" /> : s.value}
+                          </p>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+                          <s.icon className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* ── Filters row ── */}
+            <div className={`${!selected ? "px-6 lg:px-8 pt-6" : "p-4"} ${!selected ? "pb-4" : ""}`}>
+              <div className={`${!selected ? "flex flex-col md:flex-row gap-2" : "space-y-2.5"}`}>
+                <form onSubmit={handleSearch} className={`relative ${!selected ? "flex-1" : ""}`}>
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" strokeWidth={1.75} />
+                  <input
+                    value={buscaInput}
+                    onChange={e => setBuscaInput(e.target.value)}
+                    placeholder="Buscar por nome ou telefone"
+                    className="w-full bg-[#141414] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/20 transition-colors tracking-tight"
+                  />
+                </form>
+                <div className={`flex gap-2 ${!selected ? "flex-shrink-0" : ""}`}>
+                  <select
+                    value={filterUnidade}
+                    onChange={e => { setFilterUnidade(e.target.value ? Number(e.target.value) : ""); setOffset(0); }}
+                    className={`bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer tracking-tight transition-colors ${!selected ? "min-w-[160px]" : "flex-1 text-xs py-2"}`}
                   >
-                    <X className="w-3.5 h-3.5" strokeWidth={1.75} />
-                  </button>
-                )}
+                    <option value="">Todas as unidades</option>
+                    {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                  </select>
+                  <select
+                    value={filterStatus}
+                    onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}
+                    className={`bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer tracking-tight transition-colors ${!selected ? "min-w-[140px]" : "flex-1 text-xs py-2"}`}
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="open">Ativas</option>
+                    <option value="resolved">Atendidas</option>
+                    <option value="closed">Fechadas</option>
+                  </select>
+                  {(busca || filterStatus || filterUnidade) && (
+                    <button
+                      onClick={clearFilters}
+                      title="Limpar filtros"
+                      className="bg-[#141414] text-zinc-400 hover:text-white border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* List */}
+            {/* ── Content: table (full) OR list (compact) ── */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {loading ? (
-                [...Array(6)].map((_, i) => (
-                  <div key={i} className="px-5 py-5 border-b border-white/[0.03] animate-pulse">
-                    <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 bg-white/5 rounded-2xl" />
+                <div className="px-6 lg:px-8">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 py-4 border-b border-white/[0.04] animate-pulse">
+                      <div className="w-9 h-9 bg-white/[0.05] rounded-lg" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-3 bg-white/5 rounded w-1/2" />
-                        <div className="h-2 bg-white/5 rounded w-1/3" />
+                        <div className="h-3 bg-white/[0.05] rounded w-1/3" />
+                        <div className="h-2 bg-white/[0.05] rounded w-1/5" />
                       </div>
+                      <div className="w-20 h-5 bg-white/[0.05] rounded" />
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                   <div className="w-12 h-12 rounded-xl bg-[#141414] border border-white/[0.06] flex items-center justify-center mb-4">
@@ -264,7 +319,93 @@ export default function ConversasPage() {
                   <p className="text-sm text-zinc-400 tracking-tight mb-1">Nenhum resultado</p>
                   <p className="text-xs text-zinc-600 tracking-tight">Ajuste os filtros ou aguarde novas conversas</p>
                 </div>
+              ) : !selected ? (
+                /* ═════════ CRM TABLE (full width) ═════════ */
+                <div className="px-6 lg:px-8 pb-6">
+                  <div className="bg-[#141414] border border-white/[0.06] rounded-2xl overflow-hidden">
+                    {/* Table header */}
+                    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_32px] gap-4 px-5 py-3 border-b border-white/[0.06] bg-[#141414]">
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Lead</span>
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Telefone</span>
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Score</span>
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Status</span>
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Unidade</span>
+                      <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Atividade</span>
+                      <span />
+                    </div>
+                    {/* Table rows */}
+                    {conversations.map((conv, i) => (
+                      <button
+                        key={conv.id}
+                        onClick={() => setSelected(conv)}
+                        className={`w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_32px] gap-4 px-5 py-3.5 text-left hover:bg-white/[0.025] transition-colors items-center ${i !== conversations.length - 1 ? "border-b border-white/[0.04]" : ""} group`}
+                      >
+                        {/* Lead */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-lg bg-[#1A1A1A] border border-white/[0.06] group-hover:border-white/[0.12] transition-colors flex items-center justify-center text-sm font-medium text-zinc-200 flex-shrink-0">
+                            {conv.contato_nome?.charAt(0)?.toUpperCase() || "?"}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate tracking-tight">
+                              {conv.contato_nome || "Anônimo"}
+                            </p>
+                            {conv.pausada || conv.intencao_de_compra ? (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {conv.pausada && (
+                                  <span className="text-[10px] text-zinc-500 tracking-tight flex items-center gap-0.5">
+                                    <Bot className="w-2.5 h-2.5" strokeWidth={1.75} /> pausada
+                                  </span>
+                                )}
+                                {conv.intencao_de_compra && (
+                                  <span className="text-[10px] text-zinc-300 tracking-tight flex items-center gap-0.5">
+                                    <Flame className="w-2.5 h-2.5" strokeWidth={1.75} /> quente
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Telefone */}
+                        <span className="text-sm text-zinc-400 tracking-tight tabular-nums truncate">
+                          {conv.contato_fone || conv.contato_telefone || "—"}
+                        </span>
+
+                        {/* Score */}
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <div
+                              key={s}
+                              className={`w-1.5 h-1.5 rounded-full ${s <= (conv.score_lead || 0) ? "bg-white" : "bg-white/10"}`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                          <span className={`text-[11px] px-2 py-0.5 rounded-md tracking-tight font-medium inline-block ${statusColor[conv.status] || "bg-[#141414] text-zinc-500 border border-white/[0.04]"}`}>
+                            {statusLabel[conv.status] || conv.status}
+                          </span>
+                        </div>
+
+                        {/* Unidade */}
+                        <span className="text-sm text-zinc-400 tracking-tight truncate">
+                          {conv.unidade_nome || "—"}
+                        </span>
+
+                        {/* Atividade */}
+                        <span className="text-sm text-zinc-500 tracking-tight tabular-nums">
+                          {timeAgo(conv.updated_at || conv.created_at)}
+                        </span>
+
+                        {/* Chevron */}
+                        <ChevRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400 transition-colors" strokeWidth={1.75} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
+                /* ═════════ COMPACT LIST (when detail open) ═════════ */
                 <div className="p-2 space-y-1">
                   {conversations.map(conv => (
                     <button
@@ -289,8 +430,8 @@ export default function ConversasPage() {
                             <p className="text-sm font-medium text-white truncate tracking-tight">
                               {conv.contato_nome || "Anônimo"}
                             </p>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-md tracking-tight flex-shrink-0 font-medium ${statusColor[conv.status] || "bg-[#141414] text-zinc-500 border border-white/[0.04]"}`}>
-                              {statusLabel[conv.status] || conv.status}
+                            <span className="text-[10px] text-zinc-500 tabular-nums tracking-tight flex-shrink-0">
+                              {timeAgo(conv.updated_at || conv.created_at)}
                             </span>
                           </div>
                           <p className="text-xs text-zinc-500 tracking-tight mb-2 tabular-nums truncate">
@@ -307,12 +448,12 @@ export default function ConversasPage() {
                             </div>
                             {conv.pausada && (
                               <span className="text-[10px] text-zinc-400 flex items-center gap-1 bg-[#141414] px-1.5 py-0.5 rounded-md border border-white/[0.06] tracking-tight">
-                                <Bot className="w-2.5 h-2.5" strokeWidth={1.75} /> IA pausada
+                                <Bot className="w-2.5 h-2.5" strokeWidth={1.75} /> pausada
                               </span>
                             )}
                             {conv.intencao_de_compra && (
                               <span className="text-[10px] text-white flex items-center gap-1 bg-[#232323] px-1.5 py-0.5 rounded-md border border-white/[0.08] tracking-tight">
-                                <Flame className="w-2.5 h-2.5" strokeWidth={1.75} /> Quente
+                                <Flame className="w-2.5 h-2.5" strokeWidth={1.75} /> quente
                               </span>
                             )}
                           </div>
@@ -324,9 +465,9 @@ export default function ConversasPage() {
               )}
             </div>
 
-            {/* Pagination */}
+            {/* ── Pagination ── */}
             {totalPages > 1 && (
-              <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
+              <div className={`${!selected ? "px-6 lg:px-8 py-4" : "p-3"} border-t border-white/[0.06] flex items-center justify-between`}>
                 <span className="text-xs text-zinc-500 tracking-tight tabular-nums">
                   Página {currentPage} de {totalPages}
                 </span>
