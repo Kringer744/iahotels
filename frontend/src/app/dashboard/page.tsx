@@ -344,9 +344,7 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   {funnelSteps.map((step, i) => {
                     const top = funnelSteps[0]?.count || 1;
-                    const prev = funnelSteps[i - 1]?.count || 0;
                     const convFromTop = top > 0 ? Math.round((step.count / top) * 100) : 0;
-                    const dropVsPrev = i > 0 && prev > 0 ? Math.round(((prev - step.count) / prev) * 100) : 0;
                     return (
                       <div key={step.label}>
                         <div className="flex items-center justify-between py-2.5 group">
@@ -361,14 +359,6 @@ export default function DashboardPage() {
                             <span className="text-[11px] text-zinc-500 w-9 text-right">{convFromTop}%</span>
                           </div>
                         </div>
-                        {i < funnelSteps.length - 1 && (
-                          <div className="flex items-center gap-2 pl-8 -my-0.5">
-                            <span className="block w-px h-3 bg-white/[0.06]" />
-                            <span className="text-[10px] text-zinc-600 tracking-tight tabular-nums">
-                              {dropVsPrev > 0 ? `−${dropVsPrev}% de drop` : "mantido"}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
