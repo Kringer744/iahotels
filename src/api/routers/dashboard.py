@@ -389,6 +389,50 @@ async def get_eventos_funil(
         raise HTTPException(status_code=500, detail="Erro ao buscar eventos de pontuação")
 
 
+@router.get("/conversations/{conversation_id}/mensagens")
+async def get_mensagens_conversa(
+    conversation_id: int,
+    limit: int = Query(200, ge=1, le=1000),
+    token_payload: dict = Depends(get_current_user_token)
+):
+    """
+    Retorna o histórico de mensagens (cliente ↔ IA) de uma conversa, em ordem cronológica.
+    """
+    empresa_id = token_payload.get("empresa_id")
+    if not empresa_id:
+        raise HTTPException(status_code=400, detail="Empresa não identificada")
+
+    row = await _database.db_pool.fetchrow(
+        "SELECT id FROM conversas WHERE conversation_id = $1 AND empresa_id = $2",
+        conversation_id, empresa_id
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Conversa não encontrada")
+
+    try:
+        rows = await _database.db_pool.fetch(
+            """SELECT role, tipo, conteudo, url_midia, created_at
+               FROM mensagens
+               WHERE conversa_id = $1
+               ORDER BY created_at ASC
+               LIMIT $2""",
+            row["id"], limit
+        )
+        return [
+            {
+                "role": r["role"],
+                "tipo": r["tipo"],
+                "conteudo": r["conteudo"],
+                "url_midia": r["url_midia"],
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.error(f"Erro ao buscar mensagens para conversa {conversation_id}: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar mensagens")
+
+
 @router.get("/metrics/empresa")
 async def get_metrics_empresa(
     data: Optional[date] = Query(None),

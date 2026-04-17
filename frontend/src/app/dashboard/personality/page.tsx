@@ -594,10 +594,10 @@ export default function PersonalityPage() {
     voz:        !!(fd.tts_voz),
   };
 
-  const iClass = "w-full bg-[#141414] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#FFFFFF]/60 focus:bg-[#141414] transition-all text-sm leading-relaxed";
-  const taClass = `${iClass} resize-none leading-7`;
-  const lClass = "block text-xs font-bold text-slate-400 tracking-wide mb-2";
-  const card = "bg-[#141414] border border-white/8 rounded-2xl p-6 space-y-5";
+  const iClass = "w-full bg-transparent border border-white/[0.06] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/15 transition-colors leading-relaxed";
+  const taClass = `${iClass} resize-none leading-6`;
+  const lClass = "block text-xs text-zinc-400 mb-2";
+  const card = "bg-[#141414] border border-white/[0.06] rounded-2xl p-5 space-y-4";
 
   const currentPersonality = personalities.find(p => p.id === selected);
 
@@ -755,48 +755,46 @@ export default function PersonalityPage() {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* ── Editor Top Bar ───────────────────────────────── */}
-                <div className="flex-shrink-0 border-b border-white/6 bg-[#0F0F0F]/80 backdrop-blur-sm">
+                <div className="flex-shrink-0 border-b border-white/[0.06] bg-[#0F0F0F]">
                   <div className="flex items-center justify-between px-6 py-4">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border border-white/8 flex-shrink-0 overflow-hidden"
-                        style={{ backgroundColor: `${fd.emoji_cor || "#FFFFFF"}15` }}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg border border-white/[0.06] flex-shrink-0 overflow-hidden bg-[#1A1A1A]"
                       >
                         {getEmojiList(fd.emoji_tipo)[0] || "✨"}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h2 className="text-base font-black text-white">
+                          <h2 className="text-sm font-medium text-white tracking-tight">
                             {fd.nome_ia || (selected === "new" ? "Nova Personalidade" : "Editar")}
                           </h2>
                           {selected !== "new" && (
-                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                              fd.ativo ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-slate-800 text-slate-500 border border-white/5"
-                            }`}>
-                              {fd.ativo ? "● Online" : "○ Pausada"}
+                            <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400 px-2 py-0.5 rounded-md bg-[#1A1A1A] border border-white/[0.06]">
+                              <span className={`w-1.5 h-1.5 rounded-full ${fd.ativo ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                              {fd.ativo ? "Ativa" : "Pausada"}
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-600 mt-0.5">
+                        <p className="text-xs text-zinc-500 mt-0.5">
                           {selected === "new" ? "Configure a nova personalidade" : `ID #${selected} · ${MODELS.find(m => m.id === fd.model_name)?.label || fd.model_name}`}
                         </p>
                       </div>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex bg-black/40 rounded-xl p-1 border border-white/6">
+                    <div className="flex items-center gap-2">
+                      <div className="flex bg-[#141414] rounded-xl p-1 border border-white/[0.06]">
                         {(["config", "playground"] as TabKey[]).map(tab => (
                           <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                               activeTab === tab
-                                ? "bg-[#FFFFFF]/15 text-[#FFFFFF] border border-[#FFFFFF]/20"
-                                : "text-slate-500 hover:text-slate-300"
+                                ? "bg-[#1E1E1E] text-white"
+                                : "text-zinc-500 hover:text-zinc-300"
                             }`}
                           >
-                            {tab === "config" ? <><Sparkles className="w-3 h-3" /> Configuração</> : <><PlayCircle className="w-3 h-3" /> Playground</>}
+                            {tab === "config" ? <><Sparkles className="w-3 h-3" strokeWidth={1.75} /> Configuração</> : <><PlayCircle className="w-3 h-3" strokeWidth={1.75} /> Playground</>}
                           </button>
                         ))}
                       </div>
@@ -809,34 +807,29 @@ export default function PersonalityPage() {
                   <div className="flex flex-1 overflow-hidden">
 
                     {/* Section Nav */}
-                    <div className="w-48 flex-shrink-0 border-r border-white/6 bg-[#0F0F0F]/50 py-4 px-2 overflow-y-auto">
-                      {SECTIONS.map(sec => (
-                        <button
-                          key={sec.key}
-                          onClick={() => setActiveSection(sec.key)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all mb-0.5 relative group ${
-                            activeSection === sec.key
-                              ? "bg-[#FFFFFF]/8 border border-[#FFFFFF]/15"
-                              : "hover:bg-white/3 border border-transparent"
-                          }`}
-                        >
-                          <span className={`flex-shrink-0 ${activeSection === sec.key ? "text-[#FFFFFF]" : "text-slate-600 group-hover:text-slate-400"}`}>
-                            {sec.icon}
-                          </span>
-                          <div className="min-w-0">
-                            <p className={`text-xs font-bold ${activeSection === sec.key ? "text-[#FFFFFF]" : "text-slate-400 group-hover:text-slate-300"}`}>
-                              {sec.label}
-                            </p>
-                            <p className="text-[9px] text-slate-600 truncate">{sec.desc}</p>
-                          </div>
-                          {filled[sec.key] && activeSection !== sec.key && (
-                            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                          )}
-                          {activeSection === sec.key && (
-                            <ChevronRight className="ml-auto w-3 h-3 text-[#FFFFFF] flex-shrink-0" />
-                          )}
-                        </button>
-                      ))}
+                    <div className="w-52 flex-shrink-0 border-r border-white/[0.06] bg-[#0A0A0A] py-3 px-2 overflow-y-auto">
+                      {SECTIONS.map(sec => {
+                        const isActive = activeSection === sec.key;
+                        return (
+                          <button
+                            key={sec.key}
+                            onClick={() => setActiveSection(sec.key)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors mb-0.5 border ${
+                              isActive
+                                ? "bg-[#1E1E1E] text-white border-white/[0.06]"
+                                : "text-zinc-400 hover:text-white hover:bg-white/[0.03] border-transparent"
+                            }`}
+                          >
+                            <span className={`flex-shrink-0 ${isActive ? "text-white" : "text-zinc-500"}`}>
+                              {sec.icon}
+                            </span>
+                            <span className="text-sm tracking-tight flex-1 truncate">{sec.label}</span>
+                            {filled[sec.key] && !isActive && (
+                              <Check className="w-3 h-3 text-emerald-400/70 flex-shrink-0" strokeWidth={2.5} />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {/* Form Content */}

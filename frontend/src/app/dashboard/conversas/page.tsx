@@ -6,7 +6,8 @@ import {
   MessageSquare, Search, ChevronLeft, ChevronRight,
   Building2, Star, Flame, Clock, X, RefreshCw,
   Download, Zap, Bot, BarChart3, Target, Brain, Trash2, TrendingUp, CheckCircle,
-  Users, Activity, ArrowUpRight, ChevronRight as ChevRight
+  Users, Activity, ArrowUpRight, ChevronRight as ChevRight,
+  MessageCircle, Loader2, User, Mic, Image as ImageIcon
 } from "lucide-react";
 
 function timeAgo(dateStr?: string): string {
@@ -87,6 +88,24 @@ export default function ConversasPage() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [eventos, setEventos] = useState<EventoFunil[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [mensagens, setMensagens] = useState<Array<{ role: string; tipo: string; conteudo: string; url_midia?: string | null; created_at: string }>>([]);
+  const [loadingMensagens, setLoadingMensagens] = useState(false);
+
+  const openChatViewer = async () => {
+    if (!selected) return;
+    setShowChat(true);
+    setLoadingMensagens(true);
+    try {
+      const res = await axios.get(`/api-backend/dashboard/conversations/${selected.conversation_id}/mensagens`, getConfig());
+      setMensagens(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setMensagens([]);
+    } finally {
+      setLoadingMensagens(false);
+    }
+  };
 
   const getConfig = () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
@@ -495,34 +514,38 @@ export default function ConversasPage() {
           <AnimatePresence>
             {selected ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="flex-1 flex flex-col overflow-hidden bg-[#0A0A0A]/40 border-l border-white/5">
-                <div className="p-8 border-b border-white/5">
-                  <div className="flex items-center justify-between mb-6 lg:hidden">
-                    <button onClick={() => setSelected(null)} className="p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-[#FFFFFF]/10 transition-all">
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-blue-600/20 to-[#FFFFFF]/20 border-2 border-[#FFFFFF]/20 flex items-center justify-center text-4xl font-black text-[#FFFFFF] relative flex-shrink-0">
-                      {selected.contato_nome?.charAt(0) || "?"}
-                      <div className="absolute -bottom-2 -right-2 p-2.5 bg-[#FFFFFF] text-black rounded-xl shadow-lg">
-                        <Zap className="w-4 h-4" />
+                className="flex-1 flex flex-col overflow-hidden bg-[#0A0A0A] border-l border-white/[0.06]">
+
+                {/* ── Header ─────────────────────────────────── */}
+                <div className="px-6 py-5 border-b border-white/[0.06]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <button onClick={() => setSelected(null)} className="lg:hidden p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
+                        <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
+                      </button>
+                      <div className="w-11 h-11 rounded-xl bg-[#1E1E1E] border border-white/[0.06] flex items-center justify-center text-base font-semibold text-white flex-shrink-0">
+                        {selected.contato_nome?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-base font-medium text-white tracking-tight truncate">{selected.contato_nome || "Anônimo"}</h2>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400 px-2 py-0.5 rounded-md bg-[#1A1A1A] border border-white/[0.06]">
+                            <span className={`w-1.5 h-1.5 rounded-full ${selected.pausada ? "bg-zinc-600" : selected.status === "open" ? "bg-emerald-400" : "bg-zinc-400"}`} />
+                            {selected.pausada ? "IA pausada" : (statusLabel[selected.status] || selected.status)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5 truncate">{selected.contato_fone || selected.contato_telefone}</p>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h2 className="text-2xl font-black truncate">{selected.contato_nome || "Anônimo"}</h2>
-                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest ${statusColor[selected.status] || "bg-slate-700/20 text-slate-500"}`}>
-                          {statusLabel[selected.status] || selected.status}
-                        </span>
-                      </div>
-                      <p className="text-slate-500 font-bold flex items-center gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-[#FFFFFF]/40" />
-                        {selected.contato_fone || selected.contato_telefone}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-3">
-                      <button 
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={openChatViewer}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-black rounded-lg hover:bg-zinc-200 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.75} /> Ver conversa
+                      </button>
+                      <button
                         onClick={async () => {
                           try {
                             const res = await axios.post(`/api-backend/dashboard/conversations/${selected.conversation_id}/toggle-ia`, {}, getConfig());
@@ -531,17 +554,11 @@ export default function ConversasPage() {
                             setConversations(conversations.map(c => c.conversation_id === selected.conversation_id ? { ...c, pausada: newStatus } : c));
                           } catch (err) { console.error(err); }
                         }}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                          selected.pausada 
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" 
-                            : "bg-[#1A1A1A] text-zinc-300 border-white/[0.08] hover:bg-[#232323]"
-                        }`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#141414] text-zinc-300 border border-white/[0.06] rounded-lg hover:bg-[#1A1A1A] hover:text-white transition-colors"
+                        title={selected.pausada ? "Ativar IA" : "Pausar IA"}
                       >
-                        {selected.pausada ? (
-                          <><Zap className="w-4 h-4" /> Ativar IA</>
-                        ) : (
-                          <><X className="w-4 h-4" /> Pausar IA</>
-                        )}
+                        {selected.pausada ? <Zap className="w-3.5 h-3.5" strokeWidth={1.75} /> : <X className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                        {selected.pausada ? "Ativar IA" : "Pausar"}
                       </button>
                       <button
                         onClick={async () => {
@@ -560,179 +577,122 @@ export default function ConversasPage() {
                           finally { setClearingMemory(false); }
                         }}
                         disabled={clearingMemory}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-400 hover:text-red-400 rounded-lg hover:bg-white/[0.03] transition-colors disabled:opacity-50"
+                        title="Limpar memória"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        {clearingMemory ? "Limpando..." : "Limpar Memória"}
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        {clearingMemory ? "Limpando" : "Memória"}
                       </button>
-                      {memoryClearedId === String(selected.conversation_id) && (
-                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/15">
-                          MEMÓRIA LIMPA ✓
-                        </span>
-                      )}
-                      {selected.pausada && (
-                        <span className="text-[10px] font-black text-zinc-300 bg-[#1A1A1A] px-3 py-1 rounded-full border border-white/[0.08] animate-pulse">
-                          AUTOMAÇÃO DESATIVADA
-                        </span>
-                      )}
                     </div>
+                  </div>
+
+                  {memoryClearedId === String(selected.conversation_id) && (
+                    <div className="mt-3 text-xs text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.75} /> Memória limpa com sucesso
+                    </div>
+                  )}
+                </div>
+
+                {/* ── KPI Strip ───────────────────────────────── */}
+                <div className="grid grid-cols-4 border-b border-white/[0.06] divide-x divide-white/[0.06]">
+                  <div className="px-5 py-4">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs text-zinc-500">
+                      <Star className="w-3.5 h-3.5" strokeWidth={1.75} /> Lead score
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <span key={s} className={`w-1.5 h-1.5 rounded-full ${s <= (selected.score_lead || 0) ? "bg-white" : "bg-white/10"}`} />
+                      ))}
+                      <span className="text-sm font-medium text-white ml-1.5 tracking-tight">{selected.score_lead || 0}/5</span>
+                    </div>
+                  </div>
+                  <div className="px-5 py-4">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs text-zinc-500">
+                      <Flame className="w-3.5 h-3.5" strokeWidth={1.75} /> Intenção
+                    </div>
+                    <p className="text-sm font-medium text-white tracking-tight">
+                      {selected.intencao_de_compra ? "Alta" : (selected.score_lead || 0) > 0 ? "Média" : "Baixa"}
+                    </p>
+                  </div>
+                  <div className="px-5 py-4">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs text-zinc-500">
+                      <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.75} /> Mensagens
+                    </div>
+                    <p className="text-sm font-medium text-white tracking-tight">
+                      {(selected.total_mensagens_cliente || 0) + (selected.total_mensagens_ia || 0)}
+                    </p>
+                  </div>
+                  <div className="px-5 py-4">
+                    <div className="flex items-center gap-1.5 mb-2 text-xs text-zinc-500">
+                      <Target className="w-3.5 h-3.5" strokeWidth={1.75} /> Fase funil
+                    </div>
+                    <p className="text-sm font-medium text-white tracking-tight">
+                      {selected.status === "open" ? "Negociação"
+                        : selected.status === "resolved" ? "Convertido"
+                        : selected.status === "pending" ? "Pendente"
+                        : "Finalizado"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Lead Score — dots visuais */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#FFFFFF]/15 transition-all">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Star className="w-4 h-4 text-[#FFFFFF]/50" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lead Score</span>
-                      </div>
-                      <div className="flex gap-1.5 items-center">
-                        {[1, 2, 3, 4, 5].map(s => (
-                          <div key={s} className={`w-3 h-3 rounded-full transition-all ${
-                            s <= (selected.score_lead || 0)
-                              ? "bg-[#FFFFFF] shadow-[0_0_6px_rgba(212,175,55,0.6)]"
-                              : "bg-white/10"
-                          }`} />
-                        ))}
-                        <span className="text-xs font-black text-slate-400 ml-1">{selected.score_lead || 0}/5</span>
-                      </div>
-                    </div>
+                {/* ── Body ─────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
 
-                    {/* Intenção — ALTA / MÉDIA / BAIXA */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#FFFFFF]/15 transition-all">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Flame className="w-4 h-4 text-[#FFFFFF]/50" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Intenção</span>
+                  {/* Resumo Neural */}
+                  <div className="rounded-2xl border border-white/[0.06] bg-[#141414] p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+                        <h3 className="text-sm font-medium text-white tracking-tight">Resumo neural</h3>
                       </div>
-                      <p className="text-xl font-black">
-                        {selected.intencao_de_compra ? "ALTA 🔥" : (selected.score_lead || 0) > 0 ? "MÉDIA" : "BAIXA"}
-                      </p>
-                    </div>
-
-                    {/* Mensagens */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#FFFFFF]/15 transition-all">
-                      <div className="flex items-center gap-2 mb-3">
-                        <MessageSquare className="w-4 h-4 text-[#FFFFFF]/50" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mensagens</span>
-                      </div>
-                      <p className="text-xl font-black">
-                        {(selected.total_mensagens_cliente || 0) + (selected.total_mensagens_ia || 0)}
-                      </p>
-                    </div>
-
-                    {/* Fase Funil — mapeamento completo */}
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 hover:border-[#FFFFFF]/15 transition-all">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Target className="w-4 h-4 text-[#FFFFFF]/50" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fase Funil</span>
-                      </div>
-                      <p className="text-xl font-black">
-                        {selected.status === "open" ? "NEGOCIAÇÃO"
-                          : selected.status === "resolved" ? "CONVERTIDO"
-                          : selected.status === "pending" ? "PENDENTE"
-                          : "FINALIZADO"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#FFFFFF]/15 transition-all">
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="flex items-center gap-3">
-                        <Brain className="w-5 h-5 text-[#FFFFFF]" />
-                        <h3 className="text-lg font-black uppercase tracking-widest">Resumo Neural</h3>
-                      </div>
-                      <button 
+                      <button
                         onClick={handleGenerateSummary}
                         disabled={summarizing}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#FFFFFF]/10 hover:bg-[#FFFFFF]/20 border border-[#FFFFFF]/20 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-zinc-300 hover:text-white border border-white/[0.06] rounded-md hover:bg-white/[0.05] transition-colors disabled:opacity-50"
                       >
-                        {summarizing ? (
-                          <><RefreshCw className="w-3 h-3 animate-spin" /> Gerando...</>
-                        ) : (
-                          <><Zap className="w-3 h-3" /> Gerar Resumo</>
-                        )}
+                        {summarizing ? <><RefreshCw className="w-3 h-3 animate-spin" /> Gerando</> : <><Zap className="w-3 h-3" strokeWidth={1.75} /> Gerar</>}
                       </button>
                     </div>
-                    <p className="text-slate-400 leading-relaxed italic">
-                      "{selected.resumo_ia || "Nenhuma análise disponível para este lead."}"
+                    <p className="text-sm text-zinc-400 leading-relaxed">
+                      {selected.resumo_ia || <span className="text-zinc-600 italic">Nenhuma análise disponível para este lead.</span>}
                     </p>
                   </div>
 
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 space-y-4 hover:border-[#FFFFFF]/15 transition-all">
-                    <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Informações de Tráfego</h4>
-                    {[
-                      { label: "Unidade de Origem", value: selected.unidade_nome || "—", icon: Building2 },
-                      { label: "Canal de Entrada", value: selected.canal || "—", icon: Zap },
-                      { label: "Registrado em", value: selected.created_at ? new Date(selected.created_at).toLocaleString("pt-BR") : "—", icon: Clock },
-                      { label: "Última Atividade", value: selected.updated_at ? new Date(selected.updated_at).toLocaleString("pt-BR") : "—", icon: Clock },
-                    ].map(row => (
-                      <div key={row.label} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 last:pb-0">
-                        <span className="text-sm font-bold text-slate-500 flex items-center gap-2.5">
-                          <row.icon className="w-4 h-4 text-[#FFFFFF]/40" /> {row.label}
+                  {/* Informações */}
+                  <div className="rounded-2xl border border-white/[0.06] bg-[#141414] overflow-hidden">
+                    <div className="px-5 py-3 border-b border-white/[0.06]">
+                      <h3 className="text-sm font-medium text-white tracking-tight">Informações</h3>
+                    </div>
+                    <div className="divide-y divide-white/[0.04]">
+                      {[
+                        { label: "Unidade de origem", value: selected.unidade_nome || "—", icon: Building2 },
+                        { label: "Canal de entrada", value: selected.canal || "—", icon: Zap },
+                        { label: "Registrado em", value: selected.created_at ? new Date(selected.created_at).toLocaleString("pt-BR") : "—", icon: Clock },
+                        { label: "Última atividade", value: selected.updated_at ? new Date(selected.updated_at).toLocaleString("pt-BR") : "—", icon: Activity },
+                      ].map(row => (
+                        <div key={row.label} className="flex items-center justify-between px-5 py-3">
+                          <span className="text-sm text-zinc-400 flex items-center gap-2">
+                            <row.icon className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} /> {row.label}
+                          </span>
+                          <span className="text-sm text-white tracking-tight">{row.value}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between px-5 py-3">
+                        <span className="text-sm text-zinc-400 flex items-center gap-2">
+                          <CheckCircle className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} /> Lead qualificado
                         </span>
-                        <span className="text-sm font-black">{row.value}</span>
+                        <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-md border ${
+                          selected.lead_qualificado
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : "bg-[#1A1A1A] text-zinc-500 border-white/[0.06]"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${selected.lead_qualificado ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                          {selected.lead_qualificado ? "Sim" : "Não"}
+                        </span>
                       </div>
-                    ))}
-                    <div className="flex justify-between items-center py-3">
-                      <span className="text-sm font-bold text-slate-500 flex items-center gap-2.5">
-                        <CheckCircle className="w-4 h-4 text-[#FFFFFF]/40" /> Lead Qualificado
-                      </span>
-                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                        selected.lead_qualificado
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
-                          : "bg-slate-700/20 text-slate-500 border border-slate-700/20"
-                      }`}>
-                        {selected.lead_qualificado ? "Sim" : "Não"}
-                      </span>
                     </div>
                   </div>
-                  {/* Histórico de Pontuação */}
-                  <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-7 hover:border-[#FFFFFF]/15 transition-all">
-                    <div className="flex items-center gap-3 mb-5">
-                      <TrendingUp className="w-5 h-5 text-[#FFFFFF]" />
-                      <h3 className="text-lg font-black uppercase tracking-widest">Histórico de Pontuação</h3>
-                    </div>
 
-                    {loadingEventos ? (
-                      <div className="space-y-3">
-                        {[...Array(3)].map((_, i) => (
-                          <div key={i} className="flex items-center gap-4 animate-pulse">
-                            <div className="w-8 h-8 bg-white/5 rounded-xl flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                              <div className="h-2.5 bg-white/5 rounded w-1/3" />
-                              <div className="h-2 bg-white/5 rounded w-2/3" />
-                            </div>
-                            <div className="w-12 h-5 bg-white/5 rounded-full" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : eventos.length === 0 ? (
-                      <p className="text-slate-500 text-sm italic">Nenhum evento de pontuação registrado ainda.</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {eventos.map((ev, idx) => (
-                          <div key={idx} className="flex items-start gap-4 py-3 border-b border-white/5 last:border-0 last:pb-0">
-                            <div className="w-8 h-8 rounded-xl bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Star className="w-3.5 h-3.5 text-[#FFFFFF]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-black">{eventoLabels[ev.tipo_evento] ?? ev.tipo_evento}</p>
-                              {ev.descricao && (
-                                <p className="text-xs text-slate-500 mt-0.5 truncate">{ev.descricao}</p>
-                              )}
-                              <p className="text-[10px] text-slate-600 mt-1">
-                                {new Date(ev.created_at).toLocaleString("pt-BR")}
-                              </p>
-                            </div>
-                            <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex-shrink-0 self-start">
-                              +{ev.score_incremento} pts
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </motion.div>
             ) : (
@@ -754,10 +714,141 @@ export default function ConversasPage() {
         </div>
       </main>
 
+      {/* Chat Viewer Drawer */}
+      <AnimatePresence>
+        {showChat && selected && (
+          <div className="fixed inset-0 z-[100] flex justify-end">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowChat(false)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="relative w-full max-w-[480px] bg-[#0A0A0A] border-l border-white/[0.06] flex flex-col h-full"
+            >
+              {/* Header */}
+              <div className="flex-shrink-0 px-5 py-4 border-b border-white/[0.06] flex items-center gap-3 bg-[#0F0F0F]">
+                <div className="w-9 h-9 rounded-lg bg-[#1E1E1E] border border-white/[0.06] flex items-center justify-center text-sm font-semibold text-white">
+                  {selected.contato_nome?.charAt(0)?.toUpperCase() || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white tracking-tight truncate">
+                    {selected.contato_nome || "Anônimo"}
+                  </p>
+                  <p className="text-xs text-zinc-500 truncate flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${selected.pausada ? "bg-zinc-600" : "bg-emerald-400"}`} />
+                    {selected.contato_fone || selected.contato_telefone} · {mensagens.length} msgs
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowChat(false)}
+                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.75} />
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
+                {loadingMensagens ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+                  </div>
+                ) : mensagens.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <MessageCircle className="w-8 h-8 text-zinc-700 mb-3" strokeWidth={1.5} />
+                    <p className="text-sm text-zinc-400">Nenhuma mensagem registrada</p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      As mensagens aparecem aqui conforme o lead conversa.
+                    </p>
+                  </div>
+                ) : (
+                  mensagens.map((m, idx) => {
+                    const isClient = m.role === "user";
+                    const isAudio = m.tipo === "audio" || m.tipo === "ptt";
+                    const isImage = m.tipo === "image";
+                    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
+                    const showDateDivider = idx === 0 || (m.created_at && mensagens[idx - 1]?.created_at &&
+                      new Date(m.created_at).toDateString() !== new Date(mensagens[idx - 1].created_at).toDateString());
+                    return (
+                      <div key={idx}>
+                        {showDateDivider && m.created_at && (
+                          <div className="flex items-center justify-center my-4">
+                            <span className="text-[10px] text-zinc-600 bg-[#141414] border border-white/[0.04] rounded-full px-2.5 py-0.5">
+                              {new Date(m.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                          </div>
+                        )}
+                        <div className={`flex items-end gap-2 ${isClient ? "justify-start" : "justify-end"}`}>
+                          {isClient && (
+                            <div className="w-6 h-6 rounded-md bg-[#1E1E1E] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+                              <User className="w-3 h-3 text-zinc-400" strokeWidth={1.75} />
+                            </div>
+                          )}
+                          <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                            isClient
+                              ? "bg-[#1A1A1A] border border-white/[0.06] text-zinc-200 rounded-bl-sm"
+                              : "bg-white text-black rounded-br-sm"
+                          }`}>
+                            {isAudio && (
+                              <p className={`text-xs flex items-center gap-1.5 mb-1 ${isClient ? "text-zinc-500" : "text-zinc-600"}`}>
+                                <Mic className="w-3 h-3" strokeWidth={1.75} /> Áudio
+                              </p>
+                            )}
+                            {isImage && (
+                              <p className={`text-xs flex items-center gap-1.5 mb-1 ${isClient ? "text-zinc-500" : "text-zinc-600"}`}>
+                                <ImageIcon className="w-3 h-3" strokeWidth={1.75} /> Imagem
+                              </p>
+                            )}
+                            {m.url_midia && isImage && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={m.url_midia} alt="anexo" className="rounded-lg max-w-full mb-1.5" />
+                            )}
+                            <p className="whitespace-pre-wrap break-words">{m.conteudo || "—"}</p>
+                            <p className={`text-[10px] mt-1 ${isClient ? "text-zinc-600" : "text-zinc-600"} text-right`}>
+                              {time}
+                            </p>
+                          </div>
+                          {!isClient && (
+                            <div className="w-6 h-6 rounded-md bg-[#1E1E1E] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+                              <Bot className="w-3 h-3 text-zinc-400" strokeWidth={1.75} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] bg-[#0F0F0F] flex items-center justify-between">
+                <p className="text-xs text-zinc-500">
+                  Visualização somente leitura
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Cliente
+                  <span className="mx-1 text-zinc-700">·</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                  IA
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
       `}</style>
     </div>
   );
