@@ -46,14 +46,14 @@ const eventoLabels: Record<string, string> = {
 };
 
 const statusColor: Record<string, string> = {
-  open: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
-  resolved: "bg-[#FFFFFF]/10 text-[#FFFFFF] border border-[#FFFFFF]/20",
-  closed: "bg-slate-700/20 text-slate-500 border border-slate-700/20",
-  encerrada: "bg-slate-500/15 text-slate-400 border border-slate-500/20",
-  pending: "bg-[#1A1A1A] text-zinc-300 border border-white/[0.08]",
+  open: "bg-[#1A1A1A] text-emerald-400 border border-white/[0.06]",
+  resolved: "bg-[#1A1A1A] text-zinc-300 border border-white/[0.06]",
+  closed: "bg-[#141414] text-zinc-500 border border-white/[0.04]",
+  encerrada: "bg-[#141414] text-zinc-500 border border-white/[0.04]",
+  pending: "bg-[#1A1A1A] text-zinc-300 border border-white/[0.06]",
 };
 const statusLabel: Record<string, string> = {
-  open: "Aberta", resolved: "Atendido", closed: "Fechada", encerrada: "Encerrada", pending: "Pendente"
+  open: "Ativa", resolved: "Atendido", closed: "Fechada", encerrada: "Encerrada", pending: "Pendente"
 };
 
 export default function ConversasPage() {
@@ -164,53 +164,79 @@ export default function ConversasPage() {
       <DashboardSidebar activePage="conversas" />
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex-shrink-0 bg-slate-950/80 border-b border-white/5 px-8 py-5 flex items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <MessageSquare className="w-5 h-5 text-[#FFFFFF]" />
-              <h1 className="text-xl font-black" style={{ background: "linear-gradient(135deg,#fff 0%,#FFFFFF 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        <header className="flex-shrink-0 bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/[0.06] px-6 lg:px-8 py-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#141414] border border-white/[0.06] flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-white" strokeWidth={1.75} />
+            </div>
+            <div>
+              <h1 className="text-[17px] font-medium text-white tracking-tight leading-tight">
                 Central de Inteligência
               </h1>
+              <p className="text-xs text-zinc-500 tracking-tight mt-0.5">
+                <span className="text-zinc-300 tabular-nums">{total}</span> conversas mapeadas
+              </p>
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{total} conversas mapeadas</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={exportLeads} disabled={exporting}
-              className="hidden sm:flex items-center gap-2 bg-white/5 hover:bg-[#FFFFFF]/10 border border-white/8 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-slate-400 hover:text-[#FFFFFF] hover:border-[#FFFFFF]/20 disabled:opacity-50">
-              <Download className="w-4 h-4" /> {exporting ? "Exportando..." : "Exportar Leads"}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportLeads}
+              disabled={exporting}
+              className="hidden sm:flex items-center gap-2 bg-[#141414] hover:bg-[#1A1A1A] border border-white/[0.06] hover:border-white/[0.12] px-3.5 py-2 rounded-xl text-sm text-zinc-300 hover:text-white tracking-tight transition-colors disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+              {exporting ? "Exportando..." : "Exportar leads"}
             </button>
-            <button onClick={() => fetchConversations()} className="p-2.5 bg-white/5 hover:bg-[#FFFFFF]/10 rounded-xl border border-white/8 transition-all">
-              <RefreshCw className={`w-4 h-4 text-[#FFFFFF] ${loading ? "animate-spin" : ""}`} />
+            <button
+              onClick={() => fetchConversations()}
+              className="p-2 bg-[#141414] hover:bg-[#1A1A1A] rounded-xl border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+              title="Atualizar"
+            >
+              <RefreshCw className={`w-4 h-4 text-zinc-400 ${loading ? "animate-spin" : ""}`} strokeWidth={1.75} />
             </button>
           </div>
         </header>
 
         <div className="flex-1 flex overflow-hidden">
           {/* List Panel */}
-          <div className={`flex flex-col bg-slate-900/20 border-r border-white/5 ${selected ? "hidden lg:flex lg:w-[380px]" : "w-full"}`}>
+          <div className={`flex flex-col bg-[#0A0A0A] border-r border-white/[0.06] ${selected ? "hidden lg:flex lg:w-[400px]" : "w-full"}`}>
             {/* Filters */}
-            <div className="p-5 space-y-3 bg-slate-950/30 border-b border-white/5">
+            <div className="p-4 space-y-2.5 border-b border-white/[0.06]">
               <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                <input value={buscaInput} onChange={e => setBuscaInput(e.target.value)} placeholder="Buscar por nome ou fone..."
-                  className="w-full bg-slate-900/60 border border-white/8 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#FFFFFF]/40 transition-all" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" strokeWidth={1.75} />
+                <input
+                  value={buscaInput}
+                  onChange={e => setBuscaInput(e.target.value)}
+                  placeholder="Buscar por nome ou telefone"
+                  className="w-full bg-[#141414] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/20 transition-colors tracking-tight"
+                />
               </form>
-              <div className="flex gap-2 flex-wrap">
-                <select value={filterUnidade} onChange={e => { setFilterUnidade(e.target.value ? Number(e.target.value) : ""); setOffset(0); }}
-                  className="bg-slate-900/60 border border-white/8 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase text-slate-500 focus:outline-none cursor-pointer flex-1">
-                  <option value="">Todas Unidades</option>
+              <div className="flex gap-2">
+                <select
+                  value={filterUnidade}
+                  onChange={e => { setFilterUnidade(e.target.value ? Number(e.target.value) : ""); setOffset(0); }}
+                  className="bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer flex-1 tracking-tight transition-colors"
+                >
+                  <option value="">Todas as unidades</option>
                   {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
-                <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}
-                  className="bg-slate-900/60 border border-white/8 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase text-slate-500 focus:outline-none cursor-pointer flex-1">
-                  <option value="">Todos Status</option>
-                  <option value="open">Abertas</option>
+                <select
+                  value={filterStatus}
+                  onChange={e => { setFilterStatus(e.target.value); setOffset(0); }}
+                  className="bg-[#141414] border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/20 cursor-pointer flex-1 tracking-tight transition-colors"
+                >
+                  <option value="">Todos os status</option>
+                  <option value="open">Ativas</option>
                   <option value="resolved">Atendidas</option>
                   <option value="closed">Fechadas</option>
                 </select>
                 {(busca || filterStatus || filterUnidade) && (
-                  <button onClick={clearFilters} className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl px-3 py-2 text-[10px] font-black transition-all hover:bg-red-500/20">
-                    <X className="w-3.5 h-3.5" />
+                  <button
+                    onClick={clearFilters}
+                    title="Limpar filtros"
+                    className="bg-[#141414] text-zinc-400 hover:text-white border border-white/[0.06] hover:border-white/[0.12] rounded-xl px-2.5 py-2 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={1.75} />
                   </button>
                 )}
               </div>
@@ -232,62 +258,92 @@ export default function ConversasPage() {
                 ))
               ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-                  <MessageSquare className="w-12 h-12 text-slate-700 mb-4" />
-                  <p className="font-black text-slate-400 uppercase tracking-widest text-sm">Nenhum resultado</p>
+                  <div className="w-12 h-12 rounded-xl bg-[#141414] border border-white/[0.06] flex items-center justify-center mb-4">
+                    <MessageSquare className="w-5 h-5 text-zinc-600" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm text-zinc-400 tracking-tight mb-1">Nenhum resultado</p>
+                  <p className="text-xs text-zinc-600 tracking-tight">Ajuste os filtros ou aguarde novas conversas</p>
                 </div>
               ) : (
-                conversations.map(conv => (
-                  <button key={conv.id} onClick={() => setSelected(conv)}
-                    className={`w-full text-left px-5 py-5 border-b border-white/[0.03] transition-all relative group ${selected?.id === conv.id ? "bg-[#FFFFFF]/5" : "hover:bg-white/[0.02]"}`}>
-                    {selected?.id === conv.id && <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-[#FFFFFF] rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.6)]" />}
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl bg-slate-900/60 border border-white/5 flex items-center justify-center text-base font-black flex-shrink-0 group-hover:border-[#FFFFFF]/20 transition-colors">
-                        {conv.contato_nome?.charAt(0) || "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <p className="text-sm font-black truncate group-hover:text-[#FFFFFF] transition-colors">{conv.contato_nome || "Anônimo"}</p>
-                          <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0 ${statusColor[conv.status] || "bg-slate-700/20 text-slate-500"}`}>
-                            {statusLabel[conv.status] || conv.status}
-                          </span>
+                <div className="p-2 space-y-1">
+                  {conversations.map(conv => (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelected(conv)}
+                      className={`w-full text-left px-3 py-3 rounded-xl transition-colors relative group border ${
+                        selected?.id === conv.id
+                          ? "bg-[#1A1A1A] border-white/[0.08]"
+                          : "hover:bg-white/[0.03] border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium flex-shrink-0 transition-colors ${
+                          selected?.id === conv.id
+                            ? "bg-[#232323] border border-white/[0.1] text-white"
+                            : "bg-[#141414] border border-white/[0.06] text-zinc-300 group-hover:border-white/[0.1]"
+                        }`}>
+                          {conv.contato_nome?.charAt(0)?.toUpperCase() || "?"}
                         </div>
-                        <p className="text-xs text-slate-500 font-medium mb-2">{conv.contato_fone || conv.contato_telefone}</p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map(s => (
-                              <div key={s} className={`w-1.5 h-1.5 rounded-full ${s <= (conv.score_lead || 0) ? "bg-[#FFFFFF] shadow-[0_0_4px_rgba(212,175,55,0.5)]" : "bg-white/10"}`} />
-                            ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium text-white truncate tracking-tight">
+                              {conv.contato_nome || "Anônimo"}
+                            </p>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md tracking-tight flex-shrink-0 font-medium ${statusColor[conv.status] || "bg-[#141414] text-zinc-500 border border-white/[0.04]"}`}>
+                              {statusLabel[conv.status] || conv.status}
+                            </span>
                           </div>
-                          {conv.pausada && (
-                            <span className="text-[9px] font-black text-zinc-300 flex items-center gap-1 bg-[#1A1A1A] px-2 py-0.5 rounded-full border border-white/[0.08]">
-                              <Bot className="w-2.5 h-2.5" /> IA Pausada
-                            </span>
-                          )}
-                          {conv.intencao_de_compra && (
-                            <span className="text-[9px] font-black text-zinc-300 flex items-center gap-1 bg-[#1A1A1A] px-2 py-0.5 rounded-full">
-                              <Flame className="w-2.5 h-2.5" /> Quente
-                            </span>
-                          )}
+                          <p className="text-xs text-zinc-500 tracking-tight mb-2 tabular-nums truncate">
+                            {conv.contato_fone || conv.contato_telefone || "—"}
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <div
+                                  key={s}
+                                  className={`w-1 h-1 rounded-full ${s <= (conv.score_lead || 0) ? "bg-white" : "bg-white/10"}`}
+                                />
+                              ))}
+                            </div>
+                            {conv.pausada && (
+                              <span className="text-[10px] text-zinc-400 flex items-center gap-1 bg-[#141414] px-1.5 py-0.5 rounded-md border border-white/[0.06] tracking-tight">
+                                <Bot className="w-2.5 h-2.5" strokeWidth={1.75} /> IA pausada
+                              </span>
+                            )}
+                            {conv.intencao_de_compra && (
+                              <span className="text-[10px] text-white flex items-center gap-1 bg-[#232323] px-1.5 py-0.5 rounded-md border border-white/[0.08] tracking-tight">
+                                <Flame className="w-2.5 h-2.5" strokeWidth={1.75} /> Quente
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="p-4 border-t border-white/5 bg-slate-950/40 flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pág. {currentPage}/{totalPages}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setOffset(Math.max(0, offset - limit))} disabled={offset === 0}
-                    className="p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 disabled:opacity-20 transition-all">
-                    <ChevronLeft className="w-4 h-4" />
+              <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
+                <span className="text-xs text-zinc-500 tracking-tight tabular-nums">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setOffset(Math.max(0, offset - limit))}
+                    disabled={offset === 0}
+                    className="p-2 bg-[#141414] rounded-lg border border-white/[0.06] hover:border-white/[0.12] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   </button>
-                  <button onClick={() => setOffset(offset + limit)} disabled={currentPage >= totalPages}
-                    className="p-2.5 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 disabled:opacity-20 transition-all">
-                    <ChevronRight className="w-4 h-4" />
+                  <button
+                    onClick={() => setOffset(offset + limit)}
+                    disabled={currentPage >= totalPages}
+                    className="p-2 bg-[#141414] rounded-lg border border-white/[0.06] hover:border-white/[0.12] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
                   </button>
                 </div>
               </div>
@@ -539,10 +595,18 @@ export default function ConversasPage() {
                 </div>
               </motion.div>
             ) : (
-              <div className="flex-1 hidden lg:flex flex-col items-center justify-center opacity-20 select-none">
-                <Bot className="w-28 h-28 mb-6" />
-                <p className="text-xl font-black uppercase tracking-[0.4em]">Neural Insight</p>
-                <p className="text-sm italic mt-2 text-slate-400">Selecione uma interação para análise profunda</p>
+              <div className="flex-1 hidden lg:flex flex-col items-center justify-center gap-5 px-8">
+                <div className="w-14 h-14 rounded-2xl bg-[#141414] border border-white/[0.06] flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-zinc-500" strokeWidth={1.5} />
+                </div>
+                <div className="text-center max-w-sm">
+                  <p className="text-[17px] font-medium text-white tracking-tight mb-1.5">
+                    Selecione uma conversa
+                  </p>
+                  <p className="text-sm text-zinc-500 tracking-tight leading-relaxed">
+                    Escolha um lead à esquerda para ver o resumo neural, funil de eventos e métricas de qualificação.
+                  </p>
+                </div>
               </div>
             )}
           </AnimatePresence>

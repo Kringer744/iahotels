@@ -594,61 +594,61 @@ export default function PersonalityPage() {
     voz:        !!(fd.tts_voz),
   };
 
-  const iClass = "w-full bg-[#0d1f3a] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#FFFFFF]/60 focus:bg-[#0d1f3a] transition-all text-sm leading-relaxed";
+  const iClass = "w-full bg-[#141414] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#FFFFFF]/60 focus:bg-[#141414] transition-all text-sm leading-relaxed";
   const taClass = `${iClass} resize-none leading-7`;
   const lClass = "block text-xs font-bold text-slate-400 tracking-wide mb-2";
-  const card = "bg-[#0a1830]/80 border border-white/8 rounded-2xl p-6 space-y-5";
+  const card = "bg-[#141414] border border-white/8 rounded-2xl p-6 space-y-5";
 
   const currentPersonality = personalities.find(p => p.id === selected);
 
   return (
-    <div className="min-h-screen bg-[#040d1a] text-white flex overflow-hidden" style={{ height: "100vh" }}>
+    <div className="min-h-screen bg-[#0A0A0A] text-white flex overflow-hidden" style={{ height: "100vh" }}>
       <DashboardSidebar activePage="personality" />
 
       {/* ── MAIN LAYOUT ───────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* ══ LEFT PANEL — Personality List ══════════════════════════ */}
-        <div className="w-72 flex-shrink-0 flex flex-col border-r border-white/6 bg-[#06101f]">
+        <div className="w-72 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-[#0F0F0F]">
 
           {/* List Header */}
-          <div className="p-5 border-b border-white/6 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 flex items-center justify-center">
-                <Brain className="w-3.5 h-3.5 text-[#FFFFFF]" />
+          <div className="p-4 border-b border-white/[0.06] flex-shrink-0">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-[#141414] border border-white/[0.06] flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" strokeWidth={1.75} />
               </div>
               <div>
-                <h1 className="text-sm font-black tracking-tight text-white">Personalidades IA</h1>
-                <p className="text-[10px] text-slate-600">{personalities.length} configuradas</p>
+                <h1 className="text-sm font-medium text-white tracking-tight">Personalidades IA</h1>
+                <p className="text-xs text-zinc-500 tracking-tight mt-0.5">
+                  <span className="text-zinc-300 tabular-nums">{personalities.length}</span> configurada{personalities.length === 1 ? "" : "s"}
+                </p>
               </div>
             </div>
 
             {/* Search */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+            <div className="relative mb-2.5">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full bg-black/30 border border-white/6 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FFFFFF]/30 transition-all"
+                placeholder="Buscar personalidade"
+                className="w-full bg-[#141414] border border-white/[0.06] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/20 transition-colors tracking-tight"
               />
             </div>
 
             {/* New button */}
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               onClick={startNew}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm tracking-tight transition-colors border ${
                 selected === "new"
-                  ? "bg-[#FFFFFF] text-black "
-                  : "bg-[#FFFFFF]/10 text-[#FFFFFF] border border-[#FFFFFF]/20 hover:bg-[#FFFFFF]/20"
+                  ? "bg-white text-black border-white"
+                  : "bg-[#141414] text-white border-white/[0.06] hover:border-white/[0.12] hover:bg-[#1A1A1A]"
               }`}
             >
-              <Plus className="w-3.5 h-3.5" />
-              Nova Personalidade
-            </motion.button>
+              <Plus className="w-4 h-4" strokeWidth={1.75} />
+              Nova personalidade
+            </button>
           </div>
 
           {/* List */}
@@ -661,61 +661,57 @@ export default function PersonalityPage() {
                 <p className="text-[10px] text-slate-600 uppercase tracking-widest">Carregando...</p>
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-2 px-4 text-center">
-                <Brain className="w-8 h-8 text-slate-700" />
-                <p className="text-xs text-slate-600">Nenhuma personalidade{search ? " encontrada" : " criada"}</p>
+              <div className="flex flex-col items-center justify-center py-14 gap-3 px-4 text-center">
+                <div className="w-10 h-10 rounded-xl bg-[#141414] border border-white/[0.06] flex items-center justify-center">
+                  <Brain className="w-4 h-4 text-zinc-600" strokeWidth={1.5} />
+                </div>
+                <p className="text-sm text-zinc-400 tracking-tight">Nenhuma personalidade{search ? " encontrada" : " criada"}</p>
               </div>
             ) : (
-              <AnimatePresence mode="popLayout">
-                {filteredList.map((p, i) => (
-                  <motion.div
-                    key={p.id}
-                    layout
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    onClick={() => selectPersonality(p)}
-                    className={`mx-2 mb-1 rounded-xl cursor-pointer transition-all group relative ${
-                      selected === p.id
-                        ? "bg-[#FFFFFF]/8 border border-[#FFFFFF]/20"
-                        : "hover:bg-white/4 border border-transparent hover:border-white/6"
-                    }`}
-                  >
-                    <div className="p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-base border border-white/8 overflow-hidden"
-                            style={{ backgroundColor: `${p.emoji_cor || "#FFFFFF"}18` }}
-                          >
-                            {getEmojiList(p.emoji_tipo)[0] || "✨"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className={`text-sm font-bold truncate ${selected === p.id ? "text-[#FFFFFF]" : "text-white"}`}>
-                              {p.nome_ia || "Sem nome"}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${p.ativo ? "bg-emerald-400" : "bg-slate-600"}`} />
-                              <span className="text-[10px] text-slate-500 truncate">{MODELS.find(m => m.id === p.model_name)?.label || p.model_name}</span>
+              <div className="p-2 space-y-1">
+                <AnimatePresence mode="popLayout">
+                  {filteredList.map((p, i) => (
+                    <motion.div
+                      key={p.id}
+                      layout
+                      initial={{ opacity: 0, x: -4 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03, duration: 0.2 }}
+                      onClick={() => selectPersonality(p)}
+                      className={`rounded-xl cursor-pointer transition-colors group border ${
+                        selected === p.id
+                          ? "bg-[#1A1A1A] border-white/[0.1]"
+                          : "bg-transparent border-transparent hover:bg-white/[0.03] hover:border-white/[0.06]"
+                      }`}
+                    >
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center text-base bg-[#141414] border border-white/[0.06]">
+                              {getEmojiList(p.emoji_tipo)[0] || "✨"}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-white tracking-tight truncate">
+                                {p.nome_ia || "Sem nome"}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${p.ativo ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                                <span className="text-[11px] text-zinc-500 truncate tracking-tight">{MODELS.find(m => m.id === p.model_name)?.label || p.model_name}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                           <button
                             onClick={e => { e.stopPropagation(); handleDelete(p.id); }}
-                            className="p-1.5 rounded-lg hover:bg-red-500/15 text-slate-600 hover:text-red-400 transition-all"
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/[0.06] text-zinc-500 hover:text-red-400 transition-all flex-shrink-0"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                           </button>
                         </div>
                       </div>
-                    </div>
-                    {selected === p.id && (
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#FFFFFF] rounded-full" />
-                    )}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             )}
           </div>
         </div>
@@ -730,28 +726,25 @@ export default function PersonalityPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex-1 flex flex-col items-center justify-center gap-6"
+                className="flex-1 flex flex-col items-center justify-center gap-5 px-8"
               >
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-3xl bg-[#FFFFFF]/5 border border-[#FFFFFF]/10 flex items-center justify-center">
-                    <Brain className="w-12 h-12 text-[#FFFFFF]/20" />
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-[#FFFFFF]/40" />
-                  </div>
+                <div className="w-14 h-14 rounded-2xl bg-[#141414] border border-white/[0.06] flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-zinc-500" strokeWidth={1.5} />
                 </div>
-                <div className="text-center">
-                  <h2 className="text-xl font-black text-white mb-2">Nenhuma personalidade selecionada</h2>
-                  <p className="text-slate-500 text-sm">Selecione uma personalidade na lista ou crie uma nova.</p>
+                <div className="text-center max-w-sm">
+                  <h2 className="text-[17px] font-medium text-white tracking-tight mb-1.5">
+                    Nenhuma personalidade selecionada
+                  </h2>
+                  <p className="text-sm text-zinc-500 tracking-tight leading-relaxed">
+                    Selecione uma personalidade na lista ou crie uma nova para começar.
+                  </p>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   onClick={startNew}
-                  className="flex items-center gap-2 bg-[#FFFFFF] text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs "
+                  className="flex items-center gap-2 bg-white hover:bg-zinc-100 text-black px-5 py-2.5 rounded-xl font-medium text-sm tracking-tight transition-colors"
                 >
-                  <Plus className="w-4 h-4" /> Nova Personalidade
-                </motion.button>
+                  <Plus className="w-4 h-4" strokeWidth={1.75} /> Nova personalidade
+                </button>
               </motion.div>
             ) : (
               <motion.div
@@ -762,7 +755,7 @@ export default function PersonalityPage() {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* ── Editor Top Bar ───────────────────────────────── */}
-                <div className="flex-shrink-0 border-b border-white/6 bg-[#06101f]/80 backdrop-blur-sm">
+                <div className="flex-shrink-0 border-b border-white/6 bg-[#0F0F0F]/80 backdrop-blur-sm">
                   <div className="flex items-center justify-between px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div
@@ -816,7 +809,7 @@ export default function PersonalityPage() {
                   <div className="flex flex-1 overflow-hidden">
 
                     {/* Section Nav */}
-                    <div className="w-48 flex-shrink-0 border-r border-white/6 bg-[#06101f]/50 py-4 px-2 overflow-y-auto">
+                    <div className="w-48 flex-shrink-0 border-r border-white/6 bg-[#0F0F0F]/50 py-4 px-2 overflow-y-auto">
                       {SECTIONS.map(sec => (
                         <button
                           key={sec.key}
@@ -1598,7 +1591,7 @@ export default function PersonalityPage() {
                         initial={{ width: 0, opacity: 0 }}
                         animate={{ width: 200, opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
-                        className="flex-shrink-0 border-r border-white/6 bg-[#06101f]/60 flex flex-col overflow-hidden"
+                        className="flex-shrink-0 border-r border-white/6 bg-[#0F0F0F]/60 flex flex-col overflow-hidden"
                       >
                         <div className="p-3 border-b border-white/6">
                           <button
@@ -1809,7 +1802,7 @@ export default function PersonalityPage() {
                 )}
 
                 {/* ── Footer — Save Bar ────────────────────────────── */}
-                <div className="flex-shrink-0 border-t border-white/6 bg-[#06101f]/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between gap-4">
+                <div className="flex-shrink-0 border-t border-white/6 bg-[#0F0F0F]/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <AnimatePresence>
                       {saveError && (
