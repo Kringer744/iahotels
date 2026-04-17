@@ -189,7 +189,6 @@ export default function IntegrationsPage() {
   const inputClass = "w-full bg-slate-900/60 border border-white/8 rounded-2xl px-5 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-[#FFFFFF]/40 transition-all font-medium text-sm";
   const tabs = [
     { id: "chatwoot", label: "Chatwoot", icon: MessageSquare },
-    { id: "evo", label: "EVO W12", icon: Zap },
     { id: "uazapi", label: "UazAPI", icon: Hash },
   ];
 
@@ -207,10 +206,10 @@ export default function IntegrationsPage() {
                 <div className="w-1.5 h-5 bg-[#FFFFFF] rounded-full" />
                 <span className="text-[10px] font-black text-[#FFFFFF] uppercase tracking-[0.4em]">Closer IA</span>
               </div>
-              <h1 className="text-4xl font-black tracking-tight" style={{ background: "linear-gradient(135deg,#fff 0%,#FFFFFF 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Closer Connect
+              <h1 className="text-4xl font-black tracking-tight text-white">
+                Conexões de Conta
               </h1>
-              <p className="text-slate-500 mt-2 text-sm italic">Gerencie as pontes entre seus canais de atendimento e o EVO.</p>
+              <p className="text-slate-500 mt-2 text-sm italic">Gerencie as pontes entre seus canais de atendimento.</p>
             </div>
             {!isAdminMaster && activeTab !== "evo" && (
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -238,15 +237,10 @@ export default function IntegrationsPage() {
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[11px] border transition-all ${activeTab === tab.id ? "bg-[#FFFFFF]/15 text-[#FFFFFF] border-[#FFFFFF]/25" : "text-slate-500 border-white/5 hover:text-white hover:bg-white/5"}`}>
                   <tab.icon className="w-4 h-4" /> {tab.label}
-                  {tab.id === "evo" && evoUnits.filter(u => u.configurado && u.ativo).length > 0 && (
-                    <span className="bg-emerald-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full ml-1">
-                      {evoUnits.filter(u => u.configurado && u.ativo).length}
-                    </span>
-                  )}
-                  {tab.id !== "evo" && tabActive && (
+                  {tabActive && (
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
                   )}
-                  {tab.id !== "evo" && tabConfigured && !tabIntegration?.ativo && (
+                  {tabConfigured && !tabIntegration?.ativo && (
                     <span className="w-2 h-2 rounded-full bg-amber-400 ml-1" />
                   )}
                 </button>
@@ -268,94 +262,7 @@ export default function IntegrationsPage() {
           ) : (
             <AnimatePresence mode="wait">
 
-              {/* ── EVO: grid por unidade ── */}
-              {activeTab === "evo" && (
-                <motion.div key="evo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-xl font-black uppercase flex items-center gap-3">
-                        <Zap className="w-5 h-5 text-[#FFFFFF]" /> EVO W12 — Por Unidade
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">Cada unidade tem seu próprio subdomínio e chave secreta EVO.</p>
-                    </div>
-                  </div>
-
-                  {evoLoading ? (
-                    <div className="flex items-center justify-center py-24">
-                      <Loader2 className="w-7 h-7 text-[#FFFFFF] animate-spin" />
-                    </div>
-                  ) : evoUnits.length === 0 ? (
-                    <div className="text-center py-24 rounded-3xl border border-dashed border-white/5 bg-white/[0.01]">
-                      <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-4" />
-                      <p className="text-slate-400 font-bold">Nenhuma unidade ativa encontrada.</p>
-                      <p className="text-slate-600 text-sm mt-1">Cadastre unidades no painel de Unidades primeiro.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                      {evoUnits.map((unit, i) => (
-                        <motion.div
-                          key={unit.unidade_id}
-                          initial={{ opacity: 0, y: 16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="bg-slate-900/50 border border-white/5 hover:border-[#FFFFFF]/20 rounded-3xl overflow-hidden group transition-all duration-300"
-                        >
-                          <div className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="w-12 h-12 rounded-2xl bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                <Zap className="w-6 h-6 text-[#FFFFFF]" />
-                              </div>
-                              {unit.configurado ? (
-                                unit.ativo
-                                  ? <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-1.5 rounded-full">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Ativo
-                                    </span>
-                                  : <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2.5 py-1.5 rounded-full">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Pausado
-                                    </span>
-                              ) : (
-                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-white/5 border border-white/5 px-2.5 py-1.5 rounded-full">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-600" /> Não configurado
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="text-base font-black uppercase tracking-tight group-hover:text-[#FFFFFF] transition-colors mb-1 leading-tight">
-                              {unit.unidade_nome}
-                            </h3>
-                            <div className="mt-4 space-y-2 pt-4 border-t border-white/5">
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <Globe className="w-3.5 h-3.5 text-[#FFFFFF]/40 shrink-0" />
-                                {unit.config.dns
-                                  ? <span className="font-mono text-slate-300">{unit.config.dns}.w12app.com.br</span>
-                                  : <span className="italic text-slate-600">Subdomínio não definido</span>}
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <ShieldCheck className="w-3.5 h-3.5 text-[#FFFFFF]/40 shrink-0" />
-                                {unit.config.secret_key
-                                  ? <span className="font-mono">{"•".repeat(12)}</span>
-                                  : <span className="italic text-slate-600">Chave não definida</span>}
-                              </div>
-                            </div>
-                          </div>
-                          <button onClick={() => openEvoModal(unit)}
-                            className="w-full px-6 py-4 bg-white/[0.02] hover:bg-[#FFFFFF]/5 border-t border-white/5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 hover:text-[#FFFFFF] transition-all flex items-center justify-center gap-2">
-                            <Settings2 className="w-4 h-4" />
-                            {unit.configurado ? "Editar Configuração" : "Configurar Agora"}
-                          </button>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-8 p-5 bg-[#FFFFFF]/5 border border-[#FFFFFF]/10 rounded-2xl flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#FFFFFF]/10 flex items-center justify-center animate-pulse flex-shrink-0">
-                      <Zap className="w-5 h-5 text-[#FFFFFF]" />
-                    </div>
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 italic">
-                      Cada unidade usa seu próprio subdomínio EVO. O bot roteia automaticamente para o CRM correto.
-                    </p>
-                  </div>
-                </motion.div>
+              {/* EVO section removed */}
               )}
 
               {/* ── Chatwoot & UazAPI ── */}

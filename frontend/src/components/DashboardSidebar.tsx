@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Brain, Network, Settings, LogOut,
-  BarChart3, MessageSquare, Menu, X, Calendar, Users, Star,
+  MessageSquare, Menu, X, Calendar, Users, Star,
   Scissors, UserCheck, ChevronsUpDown, Search, Sparkles
 } from "lucide-react";
 
@@ -13,7 +13,6 @@ interface SidebarProps {
 
 const navItemsRaw = [
   { label: "Visão Geral", icon: LayoutDashboard, href: "/dashboard", id: "dashboard" },
-  { label: "Insights IA", icon: BarChart3, href: "/dashboard/insights", id: "insights" },
   { label: "Conversas", icon: MessageSquare, href: "/dashboard/conversas", id: "conversas" },
   { label: "Agenda", icon: Calendar, href: "/dashboard/agenda", id: "agenda" },
   { label: "Barbeiros", icon: Users, href: "/dashboard/barbeiros", id: "barbeiros" },

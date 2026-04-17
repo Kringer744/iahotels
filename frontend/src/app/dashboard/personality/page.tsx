@@ -642,7 +642,7 @@ export default function PersonalityPage() {
               onClick={startNew}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 selected === "new"
-                  ? "bg-[#FFFFFF] text-black shadow-[0_0_20px_rgba(225,29,72,0.3)]"
+                  ? "bg-[#FFFFFF] text-black "
                   : "bg-[#FFFFFF]/10 text-[#FFFFFF] border border-[#FFFFFF]/20 hover:bg-[#FFFFFF]/20"
               }`}
             >
@@ -748,7 +748,7 @@ export default function PersonalityPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startNew}
-                  className="flex items-center gap-2 bg-[#FFFFFF] text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_25px_rgba(225,29,72,0.25)]"
+                  className="flex items-center gap-2 bg-[#FFFFFF] text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs "
                 >
                   <Plus className="w-4 h-4" /> Nova Personalidade
                 </motion.button>
@@ -1351,10 +1351,10 @@ export default function PersonalityPage() {
 
                             {/* Aviso: personalidade inativa — horário não será aplicado */}
                             {!fd.ativo && (
-                              <div className="flex items-start gap-2.5 p-3.5 bg-amber-500/8 border border-amber-500/20 rounded-xl mb-4">
-                                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-amber-300/90 leading-relaxed">
-                                  Esta personalidade está <span className="font-black text-amber-400">inativa</span> — o horário configurado não será aplicado.
+                              <div className="flex items-start gap-2.5 p-3.5 bg-[#1A1A1A] border border-white/[0.08] rounded-xl mb-4">
+                                <AlertCircle className="w-4 h-4 text-zinc-300 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-zinc-400 leading-relaxed">
+                                  Esta personalidade está <span className="font-black text-zinc-300">inativa</span> — o horário configurado não será aplicado.
                                   Ative-a na seção <span className="font-black text-white">Engine</span> para que o horário entre em vigor.
                                 </p>
                               </div>
@@ -1430,7 +1430,7 @@ export default function PersonalityPage() {
                                                     onChange={e => { const np = [...periodos]; np[i] = {...np[i], fim: e.target.value}; setDia(np); }}
                                                     className={`bg-[#0a1628] border rounded-lg px-2 py-1 text-xs text-white focus:outline-none transition-colors ${
                                                       periodoInvalido
-                                                        ? "border-amber-500/60 focus:border-amber-500/80"
+                                                        ? "border-white/20 focus:border-white/40"
                                                         : "border-white/10 focus:border-[#FFFFFF]/30"
                                                     }`}
                                                     title={periodoInvalido ? "Fim deve ser maior que o início" : undefined}
@@ -1840,7 +1840,7 @@ export default function PersonalityPage() {
                       whileTap={{ scale: 0.98 }}
                       onClick={doSave}
                       disabled={saving}
-                      className="flex items-center gap-2.5 bg-[#FFFFFF] text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.35)] transition-all disabled:opacity-50"
+                      className="flex items-center gap-2.5 bg-[#FFFFFF] text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs  transition-all disabled:opacity-50"
                     >
                       {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
                         : success ? <><CheckCircle2 className="w-4 h-4" /> Salvo!</>
@@ -1857,8 +1857,8 @@ export default function PersonalityPage() {
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225,29,72,0.1); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(225,29,72,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
       `}</style>
     </div>
   );
