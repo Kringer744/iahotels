@@ -609,9 +609,9 @@ export default function PersonalityPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* ══ TOP BAR — Personalities switcher ═══════════════════════ */}
-        <div className="flex-shrink-0 border-b border-white/[0.06] bg-[#0A0A0A]">
+        <div className="flex-shrink-0 bg-[#0A0A0A]">
           {/* Header row */}
-          <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-3">
             <div>
               <h1 className="text-2xl font-semibold text-white tracking-tight">Personalidades IA</h1>
               <p className="text-sm text-zinc-500 tracking-tight mt-1">
@@ -640,7 +640,7 @@ export default function PersonalityPage() {
           </div>
 
           {/* Horizontal chip rail */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-0">
             {loading ? (
               <div className="flex items-center gap-2 text-xs text-zinc-500 py-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} /> Carregando personalidades…
@@ -734,8 +734,8 @@ export default function PersonalityPage() {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* ── Editor Top Bar ───────────────────────────────── */}
-                <div className="flex-shrink-0 border-b border-white/[0.06] bg-[#0F0F0F]">
-                  <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex-shrink-0 border-t border-white/[0.06] bg-[#0A0A0A] mt-3">
+                  <div className="flex items-center justify-between px-6 py-3">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-9 h-9 rounded-xl flex items-center justify-center text-lg border border-white/[0.06] flex-shrink-0 overflow-hidden bg-[#1A1A1A]"
