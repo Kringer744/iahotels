@@ -122,6 +122,47 @@ async def set_features_for_empresa(empresa_id: int, features: dict[str, bool]) -
                 )
 
 
+async def get_feature_config(empresa_id: int, feature_key: str) -> dict:
+    """Retorna o JSON config da feature para a empresa (ou {} se inexistente)."""
+    import src.core.database as _database
+    if not _database.db_pool:
+        return {}
+    try:
+        row = await _database.db_pool.fetchrow(
+            "SELECT config FROM empresa_features WHERE empresa_id = $1 AND feature_key = $2",
+            empresa_id, feature_key,
+        )
+    except Exception:
+        return {}
+    if not row:
+        return {}
+    cfg = row["config"]
+    if isinstance(cfg, str):
+        import json
+        try:
+            return json.loads(cfg)
+        except Exception:
+            return {}
+    return cfg or {}
+
+
+async def set_feature_config(empresa_id: int, feature_key: str, config: dict) -> None:
+    """Atualiza o JSON config da feature. Faz upsert; nao altera o flag ativo."""
+    import src.core.database as _database
+    import json as _json
+    if not _database.db_pool:
+        raise RuntimeError("db_pool nao inicializado")
+    await _database.db_pool.execute(
+        """
+        INSERT INTO empresa_features (empresa_id, feature_key, ativo, config, updated_at)
+        VALUES ($1, $2, TRUE, $3::jsonb, NOW())
+        ON CONFLICT (empresa_id, feature_key)
+        DO UPDATE SET config = EXCLUDED.config, updated_at = NOW()
+        """,
+        empresa_id, feature_key, _json.dumps(config or {}),
+    )
+
+
 async def apply_preset(empresa_id: int, preset: str) -> Set[str]:
     """Habilita todas as features do preset e desativa as demais conhecidas."""
     if preset not in PRESETS:

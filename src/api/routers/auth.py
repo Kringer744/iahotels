@@ -15,6 +15,8 @@ from src.api.deps.features import (
     get_features_for_empresa,
     set_features_for_empresa,
     apply_preset,
+    get_feature_config,
+    set_feature_config,
     PRESETS,
 )
 
@@ -59,6 +61,10 @@ class FeaturesUpdateRequest(BaseModel):
 
 class PresetApplyRequest(BaseModel):
     preset: str  # "barbearia" | "hotel" | "clinica"
+
+
+class FeatureConfigRequest(BaseModel):
+    config: dict
 
 class RegisterRequest(BaseModel):
     token: str
@@ -489,6 +495,36 @@ async def listar_presets(token_payload: dict = Depends(get_current_user_token)):
     if token_payload.get("perfil") != "admin_master":
         raise HTTPException(status_code=403, detail="Apenas admin_master")
     return {nome: sorted(list(keys)) for nome, keys in PRESETS.items()}
+
+
+@router.get("/empresas/{empresa_id}/features/{feature_key}/config")
+async def ler_feature_config(
+    empresa_id: int,
+    feature_key: str,
+    token_payload: dict = Depends(get_current_user_token),
+):
+    """Le o JSON config da feature para a empresa. admin_master ve qualquer; demais so a propria."""
+    perfil = token_payload.get("perfil")
+    if perfil != "admin_master" and token_payload.get("empresa_id") != empresa_id:
+        raise HTTPException(status_code=403, detail="Sem permissao")
+    cfg = await get_feature_config(empresa_id, feature_key)
+    return {"empresa_id": empresa_id, "feature_key": feature_key, "config": cfg}
+
+
+@router.put("/empresas/{empresa_id}/features/{feature_key}/config")
+async def atualizar_feature_config(
+    empresa_id: int,
+    feature_key: str,
+    body: FeatureConfigRequest,
+    token_payload: dict = Depends(get_current_user_token),
+):
+    """Atualiza o JSON config da feature. admin_master ou admin da propria empresa."""
+    perfil = token_payload.get("perfil")
+    if perfil != "admin_master" and token_payload.get("empresa_id") != empresa_id:
+        raise HTTPException(status_code=403, detail="Sem permissao")
+    await set_feature_config(empresa_id, feature_key, body.config or {})
+    logger.info(f"⚙️ Feature config atualizado empresa_id={empresa_id} key={feature_key}")
+    return {"empresa_id": empresa_id, "feature_key": feature_key, "config": body.config}
 
 
 @router.delete("/usuarios/{usuario_id}")
