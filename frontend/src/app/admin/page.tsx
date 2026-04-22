@@ -235,7 +235,7 @@ export default function AdminPage() {
                   type="text"
                   value={novaEmpresa.nome}
                   onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
-                  placeholder="Academia XYZ"
+                  placeholder="Nome da empresa"
                   className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 text-white placeholder:text-gray-600"
                   required
                 />
@@ -246,7 +246,7 @@ export default function AdminPage() {
                   type="text"
                   value={novaEmpresa.nome_fantasia}
                   onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome_fantasia: e.target.value })}
-                  placeholder="Academia XYZ"
+                  placeholder="Nome fantasia"
                   className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 text-white placeholder:text-gray-600"
                 />
               </div>
@@ -327,7 +327,7 @@ export default function AdminPage() {
                     type="email"
                     value={convite.email}
                     onChange={(e) => setConvite({ ...convite, email: e.target.value })}
-                    placeholder="gestor@academia.com"
+                    placeholder="gestor@empresa.com"
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 text-white placeholder:text-gray-600"
                     required
                   />
