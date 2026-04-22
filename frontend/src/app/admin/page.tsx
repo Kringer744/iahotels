@@ -180,14 +180,14 @@ export default function AdminPage() {
         getConfig()
       );
       if (res.data.email_enviado) {
-        setMsgConvite({ ok: true, text: `Convite enviado por e-mail para ${convite.email}.` });
+        setMsgConvite({ ok: true, text: `Usuário ${convite.email} criado. Link de cadastro enviado por e-mail.` });
       } else {
-        setMsgConvite({ ok: true, text: `Convite criado. E-mail não enviado (SMTP). Copie o link abaixo:` });
+        setMsgConvite({ ok: true, text: `Usuário criado. E-mail não enviado (SMTP). Copie o link de cadastro abaixo:` });
         setLinkConvite(res.data.link);
       }
       setConvite({ email: "", empresa_id: "" });
     } catch (err: any) {
-      setMsgConvite({ ok: false, text: err.response?.data?.detail || "Erro ao enviar convite." });
+      setMsgConvite({ ok: false, text: err.response?.data?.detail || "Erro ao criar usuário." });
     } finally {
       setEnviandoConvite(false);
     }
@@ -387,12 +387,15 @@ export default function AdminPage() {
               </form>
             </div>
 
-            {/* Enviar convite */}
+            {/* Criar usuário (via convite) */}
             <div className={cardCls}>
               <h2 className="text-sm font-semibold mb-5 flex items-center gap-2 text-white tracking-tight">
-                <Send className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
-                Enviar Convite
+                <UserCheck className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />
+                Criar Usuário
               </h2>
+              <p className="text-xs text-zinc-500 mb-4 -mt-3">
+                Gera um link de cadastro para o novo usuário definir senha e entrar.
+              </p>
               <form onSubmit={handleEnviarConvite} className="space-y-3">
                 <div>
                   <label className={labelCls}>Empresa *</label>
@@ -409,7 +412,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>E-mail do convidado *</label>
+                  <label className={labelCls}>E-mail do usuário *</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" strokeWidth={1.75} />
                     <input
@@ -460,10 +463,10 @@ export default function AdminPage() {
                   disabled={enviandoConvite || empresas.length === 0}
                   className={`w-full ${primaryBtn}`}
                 >
-                  {enviandoConvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" strokeWidth={2} /> Enviar Convite</>}
+                  {enviandoConvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserCheck className="w-4 h-4" strokeWidth={2} /> Criar Usuário</>}
                 </button>
                 {empresas.length === 0 && (
-                  <p className="text-xs text-zinc-500 text-center">Crie uma empresa primeiro para poder enviar convites.</p>
+                  <p className="text-xs text-zinc-500 text-center">Crie uma empresa primeiro para poder adicionar usuários.</p>
                 )}
               </form>
             </div>
