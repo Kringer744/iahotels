@@ -40,7 +40,7 @@ const NAV_CATALOG: NavItem[] = [
   { label: "Clientes", icon: UserCheck, href: "/dashboard/clientes", id: "clientes", feature: "clientes" },
   { label: "Reservas", icon: CalendarCheck, href: "/dashboard/reservas", id: "reservas", feature: "reservas" },
   { label: "Quartos", icon: BedDouble, href: "/dashboard/quartos", id: "quartos", feature: "quartos" },
-  { label: "Mensagens", icon: MessageSquare, href: "/dashboard/mensagens", id: "mensagens" },
+  { label: "Mensagens", icon: MessageSquare, href: "/dashboard/mensagens", id: "mensagens", feature: "mensagens" },
   { label: "Integrações", icon: Network, href: "/dashboard/integrations", id: "integrations" },
 ];
 

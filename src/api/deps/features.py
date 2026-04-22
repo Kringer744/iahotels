@@ -26,14 +26,21 @@ DEFAULT_FEATURES: Set[str] = {
     "servicos",
     "avaliacoes",
     "clientes",
+    "mensagens",
 }
 
 
 # Presets conhecidos. Usados pelo admin para habilitar em lote.
+#
+# Nota hoteleira: o preset "hotel" NAO inclui "mensagens" porque os
+# sistemas de reserva usados na hotelaria (Omnibees e cia) geralmente
+# nao expoem API para disparo automatico de mensagens. O fluxo correto
+# para hotel e a IA enviar o link de reserva (ex: book.omnibees.com/...)
+# durante a conversa, nao disparos pos-reserva.
 PRESETS: dict[str, Set[str]] = {
-    "barbearia": {"agenda", "profissionais", "servicos", "avaliacoes", "clientes"},
+    "barbearia": {"agenda", "profissionais", "servicos", "avaliacoes", "clientes", "mensagens"},
     "hotel":     {"reservas", "quartos", "hospedes", "checkin", "clientes"},
-    "clinica":   {"agenda", "profissionais", "avaliacoes", "clientes"},
+    "clinica":   {"agenda", "profissionais", "avaliacoes", "clientes", "mensagens"},
 }
 
 
