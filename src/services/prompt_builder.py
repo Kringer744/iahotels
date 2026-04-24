@@ -422,19 +422,31 @@ REGRAS:
         logger.debug(f"Injeção de quartos falhou (não crítico): {_q_err}")
 
     # 7.6. Link de Reserva (hotelaria) — template + instrucoes para a IA
+    # IMPORTANTE: este bloco deve ter PRIORIDADE ALTA. A LLM tende a responder
+    # "não temos link" quando o bloco aparece enterrado no prompt. Por isso
+    # usamos linguagem imperativa forte e logamos quando ele é injetado.
     try:
         if await has_feature(empresa_id, "reservas"):
             _cfg_reservas = await get_feature_config(empresa_id, "reservas")
             _template = (_cfg_reservas or {}).get("link_template", "").strip()
+            logger.info(
+                f"🔗 Feature 'reservas' ativa para empresa={empresa_id}. "
+                f"link_template={'PRESENTE' if _template else 'VAZIO'} "
+                f"(len={len(_template)})"
+            )
             if _template:
                 _adultos_default = (_cfg_reservas or {}).get("adultos_default", 1)
                 _criancas_default = (_cfg_reservas or {}).get("criancas_default", 0)
                 _obs = (_cfg_reservas or {}).get("observacoes", "").strip()
-                _bloco_reserva = f"""[LINK DE RESERVA — COMO USAR]
-Template configurado:
+                _bloco_reserva = f"""[LINK DE RESERVA — VOCÊ TEM ESTE LINK, USE-O]
+⚠️ ATENÇÃO: VOCÊ (IA) POSSUI SIM um link oficial de reservas deste hotel. Está logo abaixo.
+NUNCA diga ao hóspede "não temos link de reserva" ou "não tenho o link disponível" — isso é MENTIRA.
+Se o hóspede pedir reserva, seu trabalho é COLETAR as datas e ENVIAR o link preenchido.
+
+Template oficial de reserva:
 {_template}
 
-FLUXO OBRIGATÓRIO quando o hóspede quiser reservar:
+FLUXO OBRIGATÓRIO quando o hóspede demonstrar intenção de reserva (palavras como "reservar", "reserva", "disponibilidade", "tem vaga", "quero ficar", "quanto fica", "link", "booking"):
 1. COLETE NA CONVERSA (se ainda não tiver): data de check-in, data de check-out, número de adultos e de crianças.
 2. Se alguma dessas informações faltar, PERGUNTE antes de enviar o link. Uma pergunta por vez, de forma natural.
 3. Quando tiver os 4 dados, SUBSTITUA as variáveis no template:
@@ -443,15 +455,21 @@ FLUXO OBRIGATÓRIO quando o hóspede quiser reservar:
    - {{adultos}} → número de adultos (padrão {_adultos_default} se hóspede não especificar)
    - {{criancas}} → número de crianças (padrão {_criancas_default} se hóspede não especificar)
 4. Envie o link COMPLETO já substituído (sem chaves/placeholders sobrando).
-5. Diga ao hóspede que no link ele finaliza a reserva com disponibilidade em tempo real.
+5. Diga ao hóspede que no link ele finaliza a reserva com disponibilidade e preço em tempo real.
 
-IMPORTANTE:
+PROIBIDO:
+- NUNCA diga "não temos link", "não possuo o link", "não tenho acesso ao link", "link indisponível" — O LINK EXISTE ACIMA.
 - NUNCA invente datas ou envie o link com as variáveis {{checkin}}, {{checkout}} etc sem substituir.
 - NUNCA envie o link antes de ter check-in E check-out definidos.
 - Confirme as datas com o hóspede ("então seria check-in dia 15 e saída dia 18, 2 adultos, certo?") antes de montar o link."""
                 if _obs:
                     _bloco_reserva += f"\n\nOBSERVAÇÕES DO HOTEL (mencione quando fizer sentido):\n{_obs}"
                 blocos_prompt.append(_bloco_reserva)
+            else:
+                logger.warning(
+                    f"⚠️ Feature 'reservas' ativa mas link_template está VAZIO para empresa={empresa_id}. "
+                    f"Preencha em empresa_features.config->>'link_template'."
+                )
     except Exception as _r_err:
         logger.debug(f"Injeção de link de reserva falhou (não crítico): {_r_err}")
 
@@ -500,6 +518,7 @@ IMPORTANTE:
 - Se não souber, diga que não tem a informação.
 - Nunca invente endereços, telefones ou horários.
 - NUNCA diga "vou buscar", "estou validando" ou "vou enviar o link" — se o link existe nos dados, ENVIE IMEDIATAMENTE. Se não existe, diga que o cliente pode procurar a unidade diretamente.
+- EXCEÇÃO — LINK DE RESERVA: se o bloco [LINK DE RESERVA — VOCÊ TEM ESTE LINK, USE-O] aparecer acima, VOCÊ TEM o link. NUNCA diga que não tem. Colete check-in, check-out, adultos, crianças e envie o link preenchido.
 - NUNCA prometa enviar algo que você não tem nos dados. Se o campo mostra "não disponível" ou está vazio, NÃO prometa.
 - Se o link de matrícula está nos dados da unidade, inclua-o DIRETAMENTE na resposta. Não peça dados pessoais antes de enviar o link.
 - NUNCA confunda unidades. Responda SEMPRE sobre a unidade que está nos DADOS DA UNIDADE ATUAL acima. Se o cliente mencionar outra unidade, informe que vai direcionar.
