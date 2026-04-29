@@ -857,7 +857,7 @@ async def atualizar_unidade(
             body.foto_grade or None, body.link_tour_virtual or None,
             unidade_id, empresa_id
         )
-        from src.core.redis_client import redis_client
+        from src.core.redis_client import redis_client, invalidar_cache_ia_por_slug
         await redis_client.delete(f"cfg:unidades:lista:empresa:{empresa_id}")
         # Limpa cache individual da unidade (usado pelo carregar_unidade do bot)
         _slug_updated = body.nome.lower().replace(" ", "-") if body.nome else None
@@ -865,6 +865,10 @@ async def atualizar_unidade(
         _row_slug = await _database.db_pool.fetchval("SELECT slug FROM unidades WHERE id = $1", unidade_id)
         if _row_slug:
             await redis_client.delete(f"cfg:unidade:{empresa_id}:{_row_slug}:v2")
+            # Invalida caches de RESPOSTA da IA (cache:intent, cache:ia, semcache).
+            # Sem isso, depois de mudar nome/dados da unidade, a IA continuava
+            # respondendo com o nome/dados antigos.
+            await invalidar_cache_ia_por_slug(_row_slug)
         return {"status": "success", "message": "Unidade atualizada"}
     except Exception as e:
         logger.error(f"Erro ao atualizar unidade: {e}")

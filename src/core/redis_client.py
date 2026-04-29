@@ -73,3 +73,66 @@ async def redis_set_json(key: str, value: Any, ttl: int):
         logger.warning(f"⚠️ Redis SET falhou ({type(e).__name__}: {e}), salvando em fallback local")
         _fallback_evict_if_full()
         _LOCAL_REDIS_FALLBACK[key] = (time.time() + max(1, ttl), payload)
+
+
+async def invalidar_cache_ia_por_slug(slug: str) -> int:
+    """Apaga todos os caches de resposta da IA para um slug.
+
+    Necessário sempre que dados que afetam o prompt são alterados (unidade,
+    personalidade IA, FAQ, planos, etc). Sem isso a IA continua respondendo
+    com base em respostas antigas em cache (e.g. nome do hotel antigo).
+
+    Patterns apagados:
+      - cache:intent:{slug}:*  (cache por intenção factual)
+      - cache:ia:{slug}:*      (cache por hash da pergunta)
+      - semcache:{slug}:*      (cache semântico/embedding)
+
+    Retorna a quantidade total de chaves apagadas.
+    """
+    if not slug:
+        return 0
+    total = 0
+    try:
+        for pattern in (
+            f"cache:intent:{slug}:*",
+            f"cache:ia:{slug}:*",
+            f"semcache:{slug}:*",
+        ):
+            cursor = 0
+            while True:
+                cursor, keys = await redis_client.scan(cursor, match=pattern, count=200)
+                if keys:
+                    total += await redis_client.delete(*keys)
+                if cursor == 0:
+                    break
+        if total:
+            logger.info(f"🧹 invalidar_cache_ia_por_slug(slug={slug}) apagou {total} chaves")
+    except Exception as e:
+        logger.warning(f"Falha ao invalidar cache IA por slug={slug}: {e}")
+    return total
+
+
+async def invalidar_cache_ia_por_empresa(empresa_id: int) -> int:
+    """Apaga caches de IA de TODAS as unidades de uma empresa.
+
+    Usar quando a alteração afeta o prompt de toda a empresa (e.g.
+    personalidade IA, regras globais).
+    """
+    if not empresa_id:
+        return 0
+    try:
+        # Import tardio pra evitar ciclo: db_queries -> redis_client
+        import src.core.database as _db
+        if not _db.db_pool:
+            return 0
+        rows = await _db.db_pool.fetch(
+            "SELECT slug FROM unidades WHERE empresa_id = $1 AND ativa = TRUE",
+            empresa_id,
+        )
+        total = 0
+        for r in rows:
+            total += await invalidar_cache_ia_por_slug(r["slug"])
+        return total
+    except Exception as e:
+        logger.warning(f"Falha ao invalidar cache IA por empresa={empresa_id}: {e}")
+        return 0

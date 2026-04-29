@@ -313,6 +313,14 @@ async def update_personality(
     # Invalida caches para forçar releitura imediata no bot e no webhook
     await redis_client.delete(f"cfg:menu_triagem:{empresa_id}")
     await redis_client.delete(f"cfg:pers:empresa:{empresa_id}")
+    # Invalida caches de RESPOSTA da IA de TODAS as unidades da empresa.
+    # Sem isso, depois de mudar a personalidade (nome, tom, instrucoes),
+    # a IA continuava respondendo com a personalidade antiga em cache.
+    try:
+        from src.core.redis_client import invalidar_cache_ia_por_empresa
+        await invalidar_cache_ia_por_empresa(empresa_id)
+    except Exception as _e_inv:
+        logger.warning(f"Falha ao invalidar cache IA da empresa {empresa_id}: {_e_inv}")
 
     # Sincroniza flag Redis de pausa com o campo ativo da personalidade
     if "ativo" in update_data:
@@ -563,6 +571,14 @@ async def update_personality_by_id(
     # Invalida caches para forçar releitura imediata no bot e no webhook
     await redis_client.delete(f"cfg:menu_triagem:{empresa_id}")
     await redis_client.delete(f"cfg:pers:empresa:{empresa_id}")
+    # Invalida caches de RESPOSTA da IA de TODAS as unidades da empresa.
+    # Sem isso, depois de mudar a personalidade (nome, tom, instrucoes),
+    # a IA continuava respondendo com a personalidade antiga em cache.
+    try:
+        from src.core.redis_client import invalidar_cache_ia_por_empresa
+        await invalidar_cache_ia_por_empresa(empresa_id)
+    except Exception as _e_inv:
+        logger.warning(f"Falha ao invalidar cache IA da empresa {empresa_id}: {_e_inv}")
 
     # Sincroniza flag Redis de pausa com o campo ativo da personalidade
     paused_key = f"ia:chatwoot:paused:{empresa_id}"
