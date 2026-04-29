@@ -1544,11 +1544,13 @@ def detectar_intencao(texto: str) -> Optional[str]:
     return melhor_intencao
 
 
-async def coletar_mensagens_buffer(conversation_id: int) -> List[str]:
+async def coletar_mensagens_buffer(conversation_id: int, empresa_id: int) -> List[str]:
     """Coleta mensagens do buffer e limpa a fila da conversa.
 
     Faz uma coalescência curta para agrupar rajadas (2-4 mensagens seguidas)
     em uma única resposta, reduzindo respostas duplicadas e melhorando fluidez.
+
+    MULTI-TENANT: empresa_id e obrigatorio — chave canonica `buffet:{empresa_id}:{conv_id}`.
     """
     chave_buffet = f"buffet:{empresa_id}:{conversation_id}"
 
@@ -1582,12 +1584,15 @@ async def coletar_mensagens_buffer(conversation_id: int) -> List[str]:
     return mensagens_acumuladas
 
 
-async def aguardar_escolha_unidade_ou_reencaminhar(conversation_id: int, mensagens_acumuladas: List[str]) -> bool:
-    """Reencaminha buffer quando conversa ainda está aguardando escolha de unidade."""
-    if not await redis_client.exists(f"esperando_unidade:{conversation_id}"):
+async def aguardar_escolha_unidade_ou_reencaminhar(conversation_id: int, mensagens_acumuladas: List[str], empresa_id: int) -> bool:
+    """Reencaminha buffer quando conversa ainda está aguardando escolha de unidade.
+
+    MULTI-TENANT: empresa_id e obrigatorio para isolar a chave de buffer/estado.
+    """
+    if not await redis_client.exists(f"esperando_unidade:{empresa_id}:{conversation_id}"):
         return False
 
-    logger.info(f"⏳ Conv {conversation_id} aguardando escolha de unidade — IA pausada")
+    logger.info(f"⏳ Conv {conversation_id} (empresa={empresa_id}) aguardando escolha de unidade — IA pausada")
     for m_json in mensagens_acumuladas:
         await redis_client.rpush(f"buffet:{empresa_id}:{conversation_id}", m_json)
     await redis_client.expire(f"buffet:{empresa_id}:{conversation_id}", 300)
@@ -3840,7 +3845,7 @@ async def processar_ia_e_responder(
                             instance_name=_integr_uaz.get("instance", "default")
                         )
                         # Pega a última mensagem do buffer para o fluxo
-                        _mensagens_pool = await coletar_mensagens_buffer(conversation_id)
+                        _mensagens_pool = await coletar_mensagens_buffer(conversation_id, empresa_id)
                         if _mensagens_pool:
                             _ultima_msg = _mensagens_pool[-1]
                             _tratou = await executar_fluxo(empresa_id, _fone_redis, _ultima_msg, _fluxo_config, _uaz_fluxo_cli)
@@ -3854,7 +3859,7 @@ async def processar_ia_e_responder(
 
         # --- FIM Fluxo Visual ---
 
-        mensagens_acumuladas = await coletar_mensagens_buffer(conversation_id)
+        mensagens_acumuladas = await coletar_mensagens_buffer(conversation_id, empresa_id)
         if not mensagens_acumuladas:
             return
 
@@ -3885,7 +3890,7 @@ async def processar_ia_e_responder(
         _texto_unificado_p = " ".join([t for t in (textos + transcricoes) if t]).lower()
         _bypass_pause = any(x in _texto_unificado_p for x in ["preço", "preco", "valor", "grade", "horario", "horário", "endereço", "endereco", "unidades", "grade de aula"])
 
-        if not _bypass_pause and await aguardar_escolha_unidade_ou_reencaminhar(conversation_id, mensagens_acumuladas):
+        if not _bypass_pause and await aguardar_escolha_unidade_ou_reencaminhar(conversation_id, mensagens_acumuladas, empresa_id):
             return
 
         # ── Anti-duplicata: bloqueia reprocessamento do mesmo conteúdo ──────────
